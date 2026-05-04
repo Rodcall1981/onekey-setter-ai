@@ -300,6 +300,91 @@ function Dashboard() {
     }
   };
 
+  const handleDownloadPDF = () => {
+    if (!analysis) return;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 32px; border-bottom: 2px solid #000; padding-bottom: 20px;">
+          <h1 style="margin: 0 0 8px; font-size: 32px; color: #000;">Informe de Evaluación</h1>
+          <p style="margin: 0; font-size: 14px; color: #666;">OneKey - Asesoría Patrimonial</p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 14px; color: #666; text-transform: uppercase; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 12px;">INFORMACIÓN DEL CLIENTE</h2>
+          <p style="margin: 8px 0;"><strong>Nombre:</strong> ${clientName}</p>
+          <p style="margin: 8px 0;"><strong>Asesor:</strong> ${advisorName}</p>
+          <p style="margin: 8px 0;"><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-ES')}</p>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 14px; color: #666; text-transform: uppercase; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 12px;">PUNTUACIÓN GENERAL</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div style="background: #000; color: #fff; padding: 16px; border-radius: 8px; text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #aaa;">Score General</p>
+              <p style="margin: 0; font-size: 32px; font-weight: bold;">${analysis.score_general}/100</p>
+            </div>
+            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; text-align: center;">
+              <p style="margin: 0 0 8px; font-size: 12px; color: #666;">Calificación</p>
+              <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1b5e20;">${analysis.pai_qualification}</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 14px; color: #666; text-transform: uppercase; border-bottom: 1px solid #ddd; padding-bottom: 8px; margin-bottom: 12px;">INDICADORES</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${Object.entries(analysis.scores || {}).map(([key, val]) => `
+              <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 10px 0; text-align: left;">${key.replace(/_/g, ' ')}</td>
+                <td style="padding: 10px 0; text-align: right; font-weight: bold;">${val}%</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+
+        ${analysis.red_flags && analysis.red_flags.length > 0 ? `
+          <div style="margin-bottom: 24px; background: #ffebee; padding: 16px; border-left: 3px solid #ef5350; border-radius: 4px;">
+            <h2 style="margin: 0 0 12px; font-size: 14px; color: #b71c1c; text-transform: uppercase;">⚠️ Puntos de Atención</h2>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${analysis.red_flags.map(flag => `<li style="margin: 8px 0; color: #b71c1c;">${flag}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        ${analysis.positive_signals && analysis.positive_signals.length > 0 ? `
+          <div style="margin-bottom: 24px; background: #e8f5e9; padding: 16px; border-left: 3px solid #1b5e20; border-radius: 4px;">
+            <h2 style="margin: 0 0 12px; font-size: 14px; color: #1b5e20; text-transform: uppercase;">✓ Señales Positivas</h2>
+            <ul style="margin: 0; padding-left: 20px;">
+              ${analysis.positive_signals.map(sig => `<li style="margin: 8px 0; color: #1b5e20;">✓ ${sig}</li>`).join('')}
+            </ul>
+          </div>
+        ` : ''}
+
+        <div style="margin-top: 32px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
+          <p style="margin: 0;">Informe generado el ${new Date().toLocaleDateString('es-ES')} a las ${new Date().toLocaleTimeString('es-ES')}</p>
+          <p style="margin: 8px 0 0;">OneKey © 2026</p>
+        </div>
+      </div>
+    `;
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    document.body.appendChild(element);
+
+    const opt = {
+      margin: 10,
+      filename: `Informe_${clientName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+    };
+
+    html2pdf().set(opt).from(element).save().then(() => {
+      document.body.removeChild(element);
+    });
+  };
+
   const QualBadge = ({ q }) => {
     const styles = {
       'Apto': { bg: '#e8f5e9', text: '#1b5e20', border: '#81c784' },
@@ -521,15 +606,21 @@ function Dashboard() {
             ...analysis.positive_signals.map((sig, idx) => e('li', { key: idx, style: { color: '#1b5e20', fontSize: '13px', marginBottom: '6px' } }, '✓ ' + sig))
           )
         ),
-        e('button', {
-          onClick: () => {
-            setStep('questions');
-            setQuestions(QUESTIONS.map(q => ({...q, completed: false, notes: ''})));
-            setExpandedQuestion(0);
-            setAnalysis(null);
-          },
-          style: { width: '100%', padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }
-        }, 'Nueva Sesión')
+        e('div', { style: { display: 'flex', gap: '12px' } },
+          e('button', {
+            onClick: handleDownloadPDF,
+            style: { flex: 1, padding: '14px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, '📥 Descargar PDF'),
+          e('button', {
+            onClick: () => {
+              setStep('questions');
+              setQuestions(QUESTIONS.map(q => ({...q, completed: false, notes: ''})));
+              setExpandedQuestion(0);
+              setAnalysis(null);
+            },
+            style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, 'Nueva Sesión')
+        )
       ),
       e(Footer)
     );
