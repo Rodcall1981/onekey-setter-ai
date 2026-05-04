@@ -382,24 +382,6 @@ function Dashboard() {
             e('div', { style: { background: '#000', height: '100%', width: (completedCount / 15 * 100) + '%', transition: 'width 0.3s' } })
           )
         ),
-        e('div', { style: { background: '#f0f4f8', borderRadius: '8px', padding: '16px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #d0dce6' } },
-          e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📋 Notas de Gemini de Meet'),
-          e('textarea', {
-            value: meetNotes,
-            onChange: (evt) => setMeetNotes(evt.target.value),
-            placeholder: 'Pega aquí las notas automáticas que Gemini tomó en Google Meet...',
-            rows: 4,
-            style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none', background: '#fff', marginBottom: '12px' }
-          }),
-          e('button', {
-            onClick: handleValidate,
-            disabled: validating || !meetNotes.trim(),
-            style: { padding: '10px 16px', background: (validating || !meetNotes.trim()) ? '#ccc' : '#0066cc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: (validating || !meetNotes.trim()) ? 'not-allowed' : 'pointer' }
-          }, validating ? 'Validando...' : 'Validar Completitud')
-        ),
-        gaps.length > 0 && e('div', { style: { background: '#fff3cd', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', borderLeft: '3px solid #ffc107' } },
-          e('p', { style: { margin: '0', fontSize: '13px', color: '#856404', fontWeight: '500' } }, '⚠️ ' + gaps.filter(g => !g.covered).length + ' pregunta(s) con información adicional de Meet')
-        ),
         ...questions.map((q, idx) =>
           e('div', { key: q.id, style: { background: '#fff', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' } },
             (() => {
@@ -456,6 +438,25 @@ function Dashboard() {
               })
             )
           )
+        ),
+        e('div', { style: { background: '#f0f4f8', borderRadius: '8px', padding: '16px', marginBottom: '24px', marginTop: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #d0dce6' } },
+          e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📋 Validar con Notas de Gemini (Opcional)'),
+          e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#666' } }, 'Si tomaste notas automáticas en Google Meet, puedes pegarlas aquí para detectar gaps.'),
+          e('textarea', {
+            value: meetNotes,
+            onChange: (evt) => setMeetNotes(evt.target.value),
+            placeholder: 'Pega aquí las notas automáticas que Gemini tomó en Google Meet...',
+            rows: 4,
+            style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none', background: '#fff', marginBottom: '12px' }
+          }),
+          e('button', {
+            onClick: handleValidate,
+            disabled: validating || !meetNotes.trim(),
+            style: { padding: '10px 16px', background: (validating || !meetNotes.trim()) ? '#ccc' : '#0066cc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: (validating || !meetNotes.trim()) ? 'not-allowed' : 'pointer' }
+          }, validating ? 'Validando...' : 'Validar Completitud')
+        ),
+        gaps.length > 0 && e('div', { style: { background: '#fff3cd', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', borderLeft: '3px solid #ffc107' } },
+          e('p', { style: { margin: '0', fontSize: '13px', color: '#856404', fontWeight: '500' } }, '⚠️ ' + gaps.filter(g => !g.covered).length + ' pregunta(s) con información adicional de Meet')
         )
       ),
       e('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '0 32px 32px', display: 'flex', gap: '12px', width: '100%' } },
