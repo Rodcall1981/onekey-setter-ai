@@ -246,10 +246,10 @@ function Dashboard() {
 
   // Setup Screen
   if (step === 'setup') {
-    return e('div', { style: { background: '#fafafa', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      e('div', { style: { background: '#fff', borderRadius: '12px', padding: '48px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', maxWidth: '400px', width: '90%' } },
+    return e('div', { style: { background: 'linear-gradient(135deg, #f7f7f7 0%, #f0f2f5 100%)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+      e('div', { style: { background: '#fff', borderRadius: '12px', padding: '48px', boxShadow: '0 8px 32px rgba(56,56,56,0.12)', maxWidth: '400px', width: '90%' } },
         e('div', { style: { marginBottom: '32px' } },
-          e('div', { style: { width: '48px', height: '48px', background: '#000', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold', color: '#fff', marginBottom: '16px' } }, 'OK'),
+          e('div', { style: { fontSize: '28px', fontWeight: '300', color: '#383838', marginBottom: '16px', letterSpacing: '-0.5px' } }, 'onekey'),
           e('h1', { style: { margin: '0 0 8px', fontSize: '28px', fontWeight: '700', color: '#000' } }, 'OneKey Setter'),
           e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Diagnóstico Inicial')
         ),
@@ -283,10 +283,10 @@ function Dashboard() {
   // Intro Screen
   if (step === 'intro') {
     const script = INTRO_SCRIPT.replace('{clientName}', clientName).replace('{advisorName}', advisorName);
-    return e('div', { style: { background: '#fafafa', minHeight: '100vh' } },
-      e('div', { style: { background: '#000', color: '#fff', padding: '24px 32px' } },
-        e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' } },
-          e('div', { style: { width: '32px', height: '32px', background: '#fff', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 'bold', color: '#000' } }, 'OK'),
+    return e('div', { style: { background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)', minHeight: '100vh' } },
+      e('div', { style: { background: '#383838', color: '#fff', padding: '24px 32px', borderBottom: '1px solid #4d5c61' } },
+        e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '16px' } },
+          e('span', { style: { fontSize: '18px', fontWeight: '300', letterSpacing: '-0.5px' } }, 'onekey'),
           e('h1', { style: { margin: '0', fontSize: '20px', fontWeight: '600' } }, 'Presentación Inicial')
         )
       ),
@@ -310,7 +310,7 @@ function Dashboard() {
 
   // Questions Screen
   if (step === 'questions') {
-    return e('div', { style: { background: '#fafafa', minHeight: '100vh' } },
+    return e('div', { style: { background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)', minHeight: '100vh' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '24px 32px' } },
         e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
           e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
@@ -387,7 +387,7 @@ function Dashboard() {
 
   // Results Screen
   if (step === 'results' && analysis) {
-    return e('div', { style: { background: '#fafafa', minHeight: '100vh' } },
+    return e('div', { style: { background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)', minHeight: '100vh' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '24px 32px' } },
         e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
           e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
