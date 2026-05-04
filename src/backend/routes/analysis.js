@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { analyzeConversation } = require('../services/claudeService');
 const { saveAnalysis } = require('../services/supabaseService');
+const { validateCompleteness } = require('../services/geminiService');
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -48,6 +49,41 @@ router.post('/analyze', async (req, res) => {
 
   } catch (error) {
     console.error('Route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+router.post('/validate', async (req, res) => {
+  try {
+    const { meetNotes, questions } = req.body;
+
+    if (!meetNotes || !questions) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "meetNotes" y "questions" en el body'
+      });
+    }
+
+    const result = await validateCompleteness({ meetNotes, questions });
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: 'Validation failed',
+        details: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      gaps: result.gaps,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Validate route error:', error);
     res.status(500).json({
       error: 'Server error',
       message: error.message

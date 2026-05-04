@@ -212,6 +212,9 @@ function Dashboard() {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [meetNotes, setMeetNotes] = useState('');
+  const [gaps, setGaps] = useState([]);
+  const [validating, setValidating] = useState(false);
 
   const toggleQuestionComplete = (id) => {
     setQuestions(questions.map(q => q.id === id ? {...q, completed: !q.completed} : q));
@@ -262,6 +265,38 @@ function Dashboard() {
       setError('Error: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleValidate = async () => {
+    if (!meetNotes.trim()) {
+      setError('Por favor pega las notas de Gemini de Meet');
+      return;
+    }
+
+    setValidating(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          meetNotes,
+          questions: questions.map(q => ({ id: q.id, text: q.text, notes: q.notes }))
+        })
+      });
+
+      const data = await response.json();
+      if (data.gaps) {
+        setGaps(data.gaps);
+      } else {
+        setError('Error en la validación: ' + (data.error || 'desconocido'));
+      }
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -347,26 +382,53 @@ function Dashboard() {
             e('div', { style: { background: '#000', height: '100%', width: (completedCount / 15 * 100) + '%', transition: 'width 0.3s' } })
           )
         ),
+        e('div', { style: { background: '#f0f4f8', borderRadius: '8px', padding: '16px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', border: '1px solid #d0dce6' } },
+          e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📋 Notas de Gemini de Meet'),
+          e('textarea', {
+            value: meetNotes,
+            onChange: (evt) => setMeetNotes(evt.target.value),
+            placeholder: 'Pega aquí las notas automáticas que Gemini tomó en Google Meet...',
+            rows: 4,
+            style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none', background: '#fff', marginBottom: '12px' }
+          }),
+          e('button', {
+            onClick: handleValidate,
+            disabled: validating || !meetNotes.trim(),
+            style: { padding: '10px 16px', background: (validating || !meetNotes.trim()) ? '#ccc' : '#0066cc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '13px', cursor: (validating || !meetNotes.trim()) ? 'not-allowed' : 'pointer' }
+          }, validating ? 'Validando...' : 'Validar Completitud')
+        ),
+        gaps.length > 0 && e('div', { style: { background: '#fff3cd', borderRadius: '8px', padding: '12px 16px', marginBottom: '24px', borderLeft: '3px solid #ffc107' } },
+          e('p', { style: { margin: '0', fontSize: '13px', color: '#856404', fontWeight: '500' } }, '⚠️ ' + gaps.filter(g => !g.covered).length + ' pregunta(s) con información adicional de Meet')
+        ),
         ...questions.map((q, idx) =>
           e('div', { key: q.id, style: { background: '#fff', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' } },
-            e('div', {
-              onClick: () => setExpandedQuestion(expandedQuestion === idx ? -1 : idx),
-              style: { padding: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: q.completed ? '#e8f5e9' : '#fff', borderLeft: q.completed ? '3px solid #1b5e20' : '3px solid #ddd' }
-            },
-              e('div', { style: { flex: 1 } },
-                e('div', { style: { fontSize: '12px', color: '#666', fontWeight: '500', marginBottom: '4px' } }, q.block),
-                e('div', { style: { fontSize: '15px', fontWeight: '600', color: '#000' } }, 'P' + q.id + ': ' + q.text.substring(0, 60) + '...')
-              ),
-              e('input', {
-                type: 'checkbox',
-                checked: q.completed,
-                onChange: (evt) => {
-                  evt.stopPropagation();
-                  toggleQuestionComplete(q.id);
-                },
-                style: { width: '20px', height: '20px', cursor: 'pointer', marginLeft: '12px', marginTop: '2px' }
-              })
-            ),
+            (() => {
+              const gap = gaps.find(g => g.questionId === q.id);
+              const borderColor = gap ? (gap.covered ? '#1b5e20' : '#ffc107') : (q.completed ? '#1b5e20' : '#ddd');
+              const borderStyle = gap && !gap.covered ? '3px solid ' + borderColor : (q.completed ? '3px solid #1b5e20' : '3px solid #ddd');
+              const bgColor = gap && !gap.covered ? '#fffbf0' : (q.completed ? '#e8f5e9' : '#fff');
+              return e('div', {
+                onClick: () => setExpandedQuestion(expandedQuestion === idx ? -1 : idx),
+                style: { padding: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: bgColor, borderLeft: borderStyle }
+              },
+                e('div', { style: { flex: 1 } },
+                  e('div', { style: { fontSize: '12px', color: '#666', fontWeight: '500', marginBottom: '4px' } }, q.block),
+                  e('div', { style: { fontSize: '15px', fontWeight: '600', color: '#000' } }, (gap && !gap.covered ? '⚠️ ' : (q.completed ? '✓ ' : '')) + 'P' + q.id + ': ' + q.text.substring(0, 60) + '...')
+                ),
+                e('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+                  gap && !gap.covered && e('span', { style: { fontSize: '11px', color: '#ffc107', fontWeight: '600' } }, 'Más info'),
+                  e('input', {
+                    type: 'checkbox',
+                    checked: q.completed,
+                    onChange: (evt) => {
+                      evt.stopPropagation();
+                      toggleQuestionComplete(q.id);
+                    },
+                    style: { width: '20px', height: '20px', cursor: 'pointer', marginLeft: '12px', marginTop: '2px' }
+                  })
+                )
+              );
+            })(),
             expandedQuestion === idx && e('div', { style: { padding: '16px', borderTop: '1px solid #eee', background: '#fafafa' } },
               e('div', { style: { marginBottom: '16px' } },
                 e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#666' } }, 'Propósito'),
@@ -379,6 +441,10 @@ function Dashboard() {
               q.redFlags && e('div', { style: { marginBottom: '16px', padding: '12px', background: '#ffebee', borderRadius: '6px', borderLeft: '3px solid #ef5350' } },
                 e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#b71c1c' } }, 'Red Flags'),
                 e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, q.redFlags)
+              ),
+              gaps.find(g => g.questionId === q.id && !g.covered) && e('div', { style: { marginBottom: '16px', padding: '12px', background: '#fffbf0', borderRadius: '6px', borderLeft: '3px solid #ffc107' } },
+                e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#856404' } }, '💡 Información adicional de Meet:'),
+                e('p', { style: { margin: '0', fontSize: '13px', color: '#856404' } }, gaps.find(g => g.questionId === q.id && !g.covered).suggestion)
               ),
               e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#666', marginBottom: '6px' } }, 'Notas de la respuesta'),
               e('textarea', {
