@@ -176,7 +176,7 @@ const Header = ({ step, advisorName, clientName, completedCount }) => {
     e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
       e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
         e('span', { style: { fontSize: '18px', fontWeight: '300', letterSpacing: '-0.5px' } }, 'onekey'),
-        e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, 'Setter Dashboard')
+        e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, 'Paso 1: Sistema Arquitectura Patrimonial')
       ),
       showProgress && e('div', { style: { textAlign: 'right' } },
         e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/15' : 'Progreso'),
