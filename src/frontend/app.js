@@ -45,102 +45,130 @@ function Dashboard() {
     setClientName('');
     setInputText('');
     setAnalysis(null);
-    alert('✅ Sesión guardada: ' + clientName);
+    alert('Sesión guardada: ' + clientName);
   };
 
   const QualBadge = ({ q }) => {
-    const colors = { 'Apto': 'green', 'Necesita educación': 'yellow', 'No apto': 'red' };
-    const color = colors[q] || 'gray';
-    return e('span', { className: `px-4 py-2 rounded-lg bg-${color}-100 text-${color}-800 border border-${color}-300 font-bold` }, q);
+    const styles = {
+      'Apto': { bg: '#e8f5e9', text: '#1b5e20', border: '#81c784' },
+      'Necesita educación': { bg: '#fff3e0', text: '#e65100', border: '#ffb74d' },
+      'No apto': { bg: '#ffebee', text: '#b71c1c', border: '#ef5350' }
+    };
+    const style = styles[q] || { bg: '#f5f5f5', text: '#424242', border: '#bdbdbd' };
+    return e('span', {
+      style: { background: style.bg, color: style.text, border: '1px solid ' + style.border },
+      className: 'px-3 py-1 rounded text-sm font-medium'
+    }, q);
   };
 
-  return e('div', { className: 'min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-8' },
-    e('div', { className: 'max-w-7xl mx-auto' },
-      e('h1', { className: 'text-4xl font-bold text-slate-900 mb-2' }, '🎯 OneKey - Setter Dashboard'),
-      e('p', { className: 'text-slate-600 mb-8' }, 'Sistema inteligente de calificación'),
+  return e('div', { className: 'min-h-screen', style: { background: '#fafafa' } },
+    // Header
+    e('div', { style: { background: '#000', color: '#fff', padding: '24px 32px', borderBottom: '1px solid #333' } },
+      e('div', { className: 'max-w-7xl mx-auto flex justify-between items-center' },
+        e('div', { className: 'flex items-center gap-3' },
+          e('div', { style: { width: '32px', height: '32px', background: '#fff', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+            e('span', { style: { fontSize: '18px', fontWeight: 'bold', color: '#000' } }, 'OK')
+          ),
+          e('div', null,
+            e('h1', { style: { margin: '0', fontSize: '20px', fontWeight: '600' } }, 'OneKey'),
+            e('p', { style: { margin: '2px 0 0', fontSize: '12px', color: '#aaa' } }, 'Setter Dashboard')
+          )
+        )
+      )
+    ),
 
+    e('div', { className: 'max-w-7xl mx-auto', style: { padding: '32px' } },
       e('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-8' },
         // Panel INPUT
         e('div', { className: 'lg:col-span-1' },
-          e('div', { className: 'bg-white rounded-lg shadow-lg p-6 sticky top-8' },
-            e('h2', { className: 'text-lg font-semibold mb-4' }, '📝 Nueva Sesión'),
-            
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', position: 'sticky', top: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('h2', { style: { margin: '0 0 20px', fontSize: '16px', fontWeight: '600', color: '#000' } }, 'Nueva Sesión'),
+
             e('input', {
               value: clientName,
               onChange: (evt) => setClientName(evt.target.value),
               placeholder: 'Nombre del cliente',
-              className: 'w-full p-3 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500',
-              disabled: !!analysis
+              disabled: !!analysis,
+              style: {
+                width: '100%', padding: '12px', marginBottom: '12px', border: '1px solid #ddd', borderRadius: '6px',
+                fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box'
+              }
             }),
-            
+
             e('textarea', {
               value: inputText,
               onChange: (evt) => setInputText(evt.target.value),
-              className: 'w-full p-3 border border-slate-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500',
-              rows: 6,
               placeholder: 'Pega la conversación...',
-              disabled: !!analysis
+              rows: 8,
+              disabled: !!analysis,
+              style: {
+                width: '100%', padding: '12px', marginBottom: '12px', border: '1px solid #ddd', borderRadius: '6px',
+                fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none'
+              }
             }),
-            
+
             !analysis && e('button', {
               onClick: handleAnalyze,
               disabled: loading || !inputText.trim(),
-              className: 'w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400'
-            }, loading ? '⏳ Analizando...' : '🚀 Analizar'),
-            
-            analysis && e('div', { className: 'space-y-2' },
+              style: {
+                width: '100%', padding: '12px', background: loading || !inputText.trim() ? '#ccc' : '#000', color: '#fff',
+                border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px'
+              }
+            }, loading ? 'Analizando...' : 'Analizar'),
+
+            analysis && e('div', { style: { display: 'flex', gap: '8px', flexDirection: 'column' } },
               e('button', {
                 onClick: handleSaveSession,
-                className: 'w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 font-semibold'
-              }, '💾 Guardar Sesión'),
+                style: { padding: '12px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+              }, 'Guardar Sesión'),
               e('button', {
                 onClick: () => { setAnalysis(null); setInputText(''); setClientName(''); },
-                className: 'w-full bg-slate-400 text-white py-2 rounded-lg hover:bg-slate-500 mt-2'
-              }, '🔄 Nueva Sesión')
+                style: { padding: '12px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+              }, 'Nueva Sesión')
             )
           )
         ),
 
         // Panel RESULTADOS
         e('div', { className: 'lg:col-span-2' },
-          error && e('div', { className: 'bg-red-100 border border-red-400 text-red-700 p-4 rounded-lg mb-6' }, error),
+          error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', color: '#b71c1c', padding: '12px', borderRadius: '6px', marginBottom: '20px', fontSize: '14px' } }, error),
 
-          analysis && e('div', { className: 'space-y-6' },
+          analysis && e('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
             // Progress
-            e('div', { className: 'bg-white rounded-lg shadow p-6' },
-              e('div', { className: 'flex justify-between items-center mb-3' },
-                e('h3', { className: 'font-semibold text-lg' }, '📊 Progreso'),
-                e('span', { className: 'text-2xl font-bold text-blue-600' }, (analysis.questions_answered || 0) + '/15')
+            e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+              e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' } },
+                e('p', { style: { margin: '0', fontSize: '14px', fontWeight: '600', color: '#666' } }, 'Progreso'),
+                e('span', { style: { fontSize: '18px', fontWeight: 'bold', color: '#000' } }, (analysis.questions_answered || 0) + '/15')
               ),
-              e('div', { className: 'w-full bg-slate-200 rounded-full h-3' },
-                e('div', { className: 'bg-blue-600 h-3 rounded-full', style: { width: ((analysis.questions_answered || 0) / 15 * 100) + '%' } })
+              e('div', { style: { width: '100%', background: '#e0e0e0', height: '4px', borderRadius: '2px', overflow: 'hidden' } },
+                e('div', { style: { background: '#000', height: '100%', width: ((analysis.questions_answered || 0) / 15 * 100) + '%' } })
               )
             ),
 
             // Score + Qualification
-            e('div', { className: 'grid grid-cols-2 gap-4' },
-              e('div', { className: 'bg-gradient-to-br from-blue-500 to-blue-700 rounded-lg shadow p-6 text-white' },
-                e('p', { className: 'text-sm opacity-90' }, 'Score General'),
-                e('p', { className: 'text-4xl font-bold' }, analysis.score_general + '/100')
+            e('div', { className: 'grid grid-cols-2 gap-3' },
+              e('div', { style: { background: '#000', color: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+                e('p', { style: { margin: '0 0 8px', fontSize: '12px', color: '#aaa' } }, 'Score General'),
+                e('p', { style: { margin: '0', fontSize: '32px', fontWeight: 'bold' } }, analysis.score_general + '/100')
               ),
-              e('div', { className: 'bg-white rounded-lg shadow p-6 flex flex-col justify-center' },
-                e('p', { className: 'text-sm text-slate-600 mb-2' }, 'Calificación PAI'),
+              e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+                e('p', { style: { margin: '0 0 8px', fontSize: '12px', color: '#666' } }, 'Calificación'),
                 e(QualBadge, { q: analysis.pai_qualification })
               )
             ),
 
             // Scores detallados
-            e('div', { className: 'bg-white rounded-lg shadow p-6' },
-              e('h3', { className: 'text-lg font-semibold mb-4' }, '📊 Scores'),
-              e('div', { className: 'grid grid-cols-2 gap-4' },
-                Object.entries(analysis.scores || {}).map(([key, val]) => 
-                  e('div', { key },
-                    e('div', { className: 'flex justify-between mb-1' },
-                      e('span', { className: 'text-sm font-medium' }, key.replace(/_/g, ' ')),
-                      e('span', { className: 'text-sm font-bold text-blue-600' }, val + '/100')
+            e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+              e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, 'Indicadores'),
+              e('div', { className: 'grid grid-cols-2 gap-3' },
+                Object.entries(analysis.scores || {}).map(([key, val]) =>
+                  e('div', { key, style: { padding: '12px', background: '#f5f5f5', borderRadius: '6px' } },
+                    e('div', { style: { display: 'flex', justifyContent: 'space-between', marginBottom: '6px' } },
+                      e('span', { style: { fontSize: '12px', fontWeight: '500', color: '#666' } }, key.replace(/_/g, ' ')),
+                      e('span', { style: { fontSize: '12px', fontWeight: 'bold', color: '#000' } }, val + '%')
                     ),
-                    e('div', { className: 'w-full bg-slate-200 rounded-full h-2' },
-                      e('div', { className: 'bg-blue-600 h-2 rounded-full', style: { width: val + '%' } })
+                    e('div', { style: { width: '100%', background: '#ddd', height: '3px', borderRadius: '2px', overflow: 'hidden' } },
+                      e('div', { style: { background: '#000', height: '100%', width: val + '%' } })
                     )
                   )
                 )
@@ -148,49 +176,48 @@ function Dashboard() {
             ),
 
             // Aprobación
-            analysis.approval_capacity && e('div', { className: 'bg-indigo-50 rounded-lg shadow p-6 border-l-4 border-indigo-500' },
-              e('h3', { className: 'text-lg font-semibold mb-3 text-indigo-700' }, '💰 Capacidad Aprobación'),
-              e('p', { className: 'text-2xl font-bold text-indigo-900' }, 'UF ' + (analysis.approval_capacity || 0).toFixed(0)),
-              e('p', { className: 'text-sm text-indigo-600 mt-2' }, '(Sueldo ÷ 800)')
+            analysis.approval_capacity && e('div', { style: { background: '#f5f5f5', borderRadius: '8px', padding: '16px', borderLeft: '3px solid #000' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', color: '#666' } }, 'Capacidad de Aprobación'),
+              e('p', { style: { margin: '0', fontSize: '24px', fontWeight: 'bold', color: '#000' } }, 'UF ' + (analysis.approval_capacity || 0).toFixed(0))
             ),
 
             // Tipo inversión
-            analysis.investment_type && e('div', { className: 'bg-emerald-50 rounded-lg shadow p-6 border-l-4 border-emerald-500' },
-              e('h3', { className: 'text-lg font-semibold mb-3 text-emerald-700' }, '🏠 Tipo de Inversión'),
-              e('p', { className: 'text-xl font-bold text-emerald-900' }, analysis.investment_type)
+            analysis.investment_type && e('div', { style: { background: '#f5f5f5', borderRadius: '8px', padding: '16px', borderLeft: '3px solid #000' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', color: '#666' } }, 'Tipo de Inversión'),
+              e('p', { style: { margin: '0', fontSize: '16px', fontWeight: 'bold', color: '#000' } }, analysis.investment_type)
             ),
 
             // Red Flags
-            analysis.red_flags && analysis.red_flags.length > 0 && e('div', { className: 'bg-red-50 rounded-lg shadow p-6 border-l-4 border-red-500' },
-              e('h3', { className: 'text-lg font-semibold mb-3 text-red-700' }, '🚨 Red Flags'),
-              e('ul', { className: 'space-y-2' },
-                analysis.red_flags.map((flag, idx) => e('li', { key: idx, className: 'text-red-700 flex items-start text-sm' }, e('span', { className: 'mr-2' }, '⚠️'), flag))
+            analysis.red_flags && analysis.red_flags.length > 0 && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', borderLeft: '3px solid #ef5350' } },
+              e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#b71c1c' } }, 'Puntos de Atención'),
+              e('ul', { style: { margin: '0', paddingLeft: '20px', listStyle: 'none' } },
+                analysis.red_flags.map((flag, idx) => e('li', { key: idx, style: { color: '#b71c1c', fontSize: '13px', marginBottom: '6px' } }, '• ' + flag))
               )
             ),
 
             // Positivas
-            analysis.positive_signals && analysis.positive_signals.length > 0 && e('div', { className: 'bg-green-50 rounded-lg shadow p-6 border-l-4 border-green-500' },
-              e('h3', { className: 'text-lg font-semibold mb-3 text-green-700' }, '✅ Señales Positivas'),
-              e('ul', { className: 'space-y-2' },
-                analysis.positive_signals.map((sig, idx) => e('li', { key: idx, className: 'text-green-700 flex items-start text-sm' }, e('span', { className: 'mr-2' }, '✓'), sig))
+            analysis.positive_signals && analysis.positive_signals.length > 0 && e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '16px', borderLeft: '3px solid #1b5e20' } },
+              e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#1b5e20' } }, 'Señales Positivas'),
+              e('ul', { style: { margin: '0', paddingLeft: '20px', listStyle: 'none' } },
+                analysis.positive_signals.map((sig, idx) => e('li', { key: idx, style: { color: '#1b5e20', fontSize: '13px', marginBottom: '6px' } }, '✓ ' + sig))
               )
             ),
 
             // Recomendaciones
-            e('div', { className: 'bg-purple-50 rounded-lg shadow p-6 border-l-4 border-purple-500' },
-              e('h3', { className: 'text-lg font-semibold mb-3 text-purple-700' }, '💡 Recomendaciones'),
-              e('div', { className: 'mb-4' },
-                e('p', { className: 'font-semibold text-purple-900 mb-2' }, '📌 Próxima pregunta:'),
-                e('p', { className: 'text-purple-800 italic' }, analysis.next_question_recommended)
+            e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+              e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, 'Recomendaciones'),
+              e('div', { style: { marginBottom: '12px' } },
+                e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#666' } }, 'Próxima pregunta'),
+                e('p', { style: { margin: '0', fontSize: '13px', color: '#333', fontStyle: 'italic' } }, analysis.next_question_recommended)
               ),
-              e('div', { className: 'bg-white rounded p-3 border border-purple-200' },
-                e('p', { className: 'font-semibold text-purple-900 mb-2' }, '🎯 Estrategia:'),
-                e('p', { className: 'text-purple-800 text-sm' }, analysis.tactical_note)
+              e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '12px' } },
+                e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#666' } }, 'Estrategia'),
+                e('p', { style: { margin: '0', fontSize: '13px', color: '#333' } }, analysis.tactical_note)
               ),
-              analysis.closing_phrases && e('div', { className: 'mt-4 bg-purple-100 rounded p-3' },
-                e('p', { className: 'font-semibold text-purple-900 mb-2' }, '💬 Frases:'),
-                e('ul', { className: 'space-y-1' },
-                  (analysis.closing_phrases || []).map((phrase, idx) => e('li', { key: idx, className: 'text-purple-800 text-sm' }, '• "' + phrase + '"'))
+              analysis.closing_phrases && e('div', { null },
+                e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#666' } }, 'Frases de Cierre'),
+                e('ul', { style: { margin: '0', paddingLeft: '20px' } },
+                  (analysis.closing_phrases || []).map((phrase, idx) => e('li', { key: idx, style: { fontSize: '13px', color: '#333', marginBottom: '4px' } }, '"' + phrase + '"'))
                 )
               )
             )
@@ -199,14 +226,14 @@ function Dashboard() {
       ),
 
       // Historial
-      sessions.length > 0 && e('div', { className: 'mt-12 bg-white rounded-lg shadow-lg p-6' },
-        e('h2', { className: 'text-2xl font-bold mb-6' }, '📋 Historial'),
+      sessions.length > 0 && e('div', { style: { marginTop: '40px' } },
+        e('h2', { style: { margin: '0 0 16px', fontSize: '18px', fontWeight: '600', color: '#000' } }, 'Historial de Sesiones'),
         e('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-4' },
-          sessions.map((s) => e('div', { key: s.id, className: 'border border-slate-300 rounded-lg p-4 hover:shadow-lg' },
-            e('p', { className: 'font-bold text-lg' }, s.clientName),
-            e('p', { className: 'text-sm text-slate-600' }, s.timestamp),
-            e('div', { className: 'mt-3 flex justify-between items-center' },
-              e('span', { className: 'text-2xl font-bold text-blue-600' }, s.score + '/100'),
+          sessions.map((s) => e('div', { key: s.id, style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', transition: 'box-shadow 0.2s' } },
+            e('p', { style: { margin: '0 0 8px', fontSize: '16px', fontWeight: '600', color: '#000' } }, s.clientName),
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#999' } }, s.timestamp),
+            e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+              e('span', { style: { fontSize: '20px', fontWeight: 'bold', color: '#000' } }, s.score + '/100'),
               e(QualBadge, { q: s.qualification })
             )
           ))
