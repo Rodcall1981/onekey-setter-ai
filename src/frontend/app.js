@@ -392,7 +392,6 @@ function Dashboard() {
           )
         )
       ),
-      ),
       e('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '0 32px 32px', display: 'flex', gap: '12px', width: '100%' } },
         e('button', {
           onClick: () => setStep('setup'),
