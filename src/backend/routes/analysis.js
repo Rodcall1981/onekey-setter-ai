@@ -875,11 +875,13 @@ router.post('/objections', async (req, res) => {
           apiKey: process.env.ANTHROPIC_API_KEY
         });
 
-        const prompt = `Eres un coach de cierre inmobiliario chileno. El cliente (perfil: ${profile || 'desconocido'}) objetó: "${objection_text}".
+        const prompt = `Eres un asesor inmobiliario chileno (sector ejecutivo/clase media alta). El cliente objetó: "${objection_text}".
 
-Aplica el loop de Belfort de 5 pasos (Acuerdo, Aislamiento, Indagación, Reframe, Test de cierre) y devuelve cada paso con una frase literal en chileno, lista para leer. Máximo 1-2 frases por paso. No inventes datos de proyecto; usa variables [X] donde falten cifras.
+Usa el loop de 5 pasos (Acuerdo, Aislamiento, Indagación, Reframe, Test) en CHILENO NATURAL Y DIRECTO, como hablamos en reuniones reales. Sin formalidades, sin "Cachai", sin jerga exagerada. Tono profesional pero cercano.
 
-Responde SOLO en JSON, así:
+Máximo 1-2 frases por paso. Si necesitas datos que no tienes, usa [DATO].
+
+Responde SOLO en JSON:
 {
   "paso_1_acuerdo": "frase aquí",
   "paso_2_aislamiento": "frase aquí",

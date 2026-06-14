@@ -85,7 +85,8 @@
       "Bash(node -e ' *)",
       "Bash(git commit -m 'feat: implement Station 5 \\(Objections\\) - Mode A \\(prebuilt\\) + Mode B \\(AI-generated\\) *)",
       "Bash(tee /tmp/server_debug.log)",
-      "Bash(curl -s -X POST http://localhost:3001/api/objections -H 'Content-Type: application/json' -d '{ *)"
+      "Bash(curl -s -X POST http://localhost:3001/api/objections -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(git commit -m 'improve: use natural Chilean Spanish in objection handling *)"
     ]
   }
 }
