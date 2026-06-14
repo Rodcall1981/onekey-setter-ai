@@ -12,7 +12,21 @@
       "Bash(git commit -m 'feat: add notes field, '\\\\''Otra'\\\\'' tag, and auto-focus for Station 2 \\(Discovery\\) *)",
       "Bash(node --check /Users/a123/Documents/Workspace/onekey-setter-ai/src/frontend/app.js)",
       "Bash(git commit -m 'fix: syntax error in Discovery notes field rendering *)",
-      "Bash(git commit -m 'feat: Station 2 \\(Discovery\\) fully functional and tested *)"
+      "Bash(git commit -m 'feat: Station 2 \\(Discovery\\) fully functional and tested *)",
+      "Bash(npm start *)",
+      "Bash(echo \"Server started. PID: $!\")",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"node src/backend/server\")",
+      "Bash(pkill -f \"npm start\")",
+      "Bash(echo \"New server started. PID: $!\")",
+      "Bash(curl -s -X POST http://localhost:3001/api/sessions -H 'Content-Type: application/json' -d '{\"setter_id\":\"test_asesor\",\"client_name\":\"Juan Pérez\",\"reunion_mode\":\"1_reunion\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/discovery -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(curl -s http://localhost:3001/api/discovery/3d9fe482-cbfc-407a-8798-803425b236b7)",
+      "Bash(curl -s http://localhost:3001/api/business-config)",
+      "Bash(pkill -f \"npm start\" || true *)",
+      "Bash(curl -s -X POST http://localhost:3001/api/profile-semaforo -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(chmod +x /tmp/test_station3.sh)",
+      "Bash(/tmp/test_station3.sh)"
     ]
   }
 }

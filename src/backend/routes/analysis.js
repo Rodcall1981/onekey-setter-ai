@@ -220,4 +220,165 @@ router.post('/discovery', async (req, res) => {
   }
 });
 
+// ESTACIÓN 3: Obtener Discovery responses para perfil detection
+router.get('/discovery/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "sessionId" en URL'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('discovery_responses')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+
+    if (error) {
+      console.error('Supabase discovery fetch error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch discovery',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      data: data || {}
+    });
+
+  } catch (error) {
+    console.error('Discovery fetch route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 3: Obtener business config constants
+router.get('/business-config', async (req, res) => {
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('business_config')
+      .select('config_key, config_value')
+      .in('config_key', ['UF_VALUE_CLP', 'SEMAFORO_DIVIDEND_DIVISOR', 'SEMAFORO_GREEN_THRESHOLD_PERCENT', 'SEMAFORO_YELLOW_THRESHOLD_PERCENT']);
+
+    if (error) {
+      console.error('Supabase config fetch error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch config',
+        details: error.message
+      });
+    }
+
+    // Convertir array a object
+    const config = {};
+    (data || []).forEach(item => {
+      config[item.config_key] = parseFloat(item.config_value);
+    });
+
+    res.json({
+      success: true,
+      config: {
+        UF_VALUE_CLP: config.UF_VALUE_CLP || 41000,
+        divisor: config.SEMAFORO_DIVIDEND_DIVISOR || 200,
+        threshold_amarillo: config.SEMAFORO_GREEN_THRESHOLD_PERCENT || 25,
+        threshold_rojo: config.SEMAFORO_YELLOW_THRESHOLD_PERCENT || 35
+      }
+    });
+
+  } catch (error) {
+    console.error('Config fetch route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 3: Guardar Profile + Semáforo
+router.post('/profile-semaforo', async (req, res) => {
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const {
+      session_id,
+      profile_detected,
+      profile_corrected_by_advisor,
+      traffic_light,
+      semaforo_rationale,
+      estimated_dividend_uf,
+      dividend_to_income_percent,
+      meeting_1_ended_at,
+      meeting_2_scheduled_at
+    } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "session_id"'
+      });
+    }
+
+    const profileData = {
+      session_id,
+      profile_detected,
+      profile_corrected_by_advisor,
+      traffic_light,
+      semaforo_rationale,
+      estimated_dividend_uf,
+      dividend_to_income_percent,
+      meeting_1_ended_at,
+      meeting_2_scheduled_at
+    };
+
+    const { data, error } = await supabase
+      .from('profile_semaforo')
+      .insert([profileData])
+      .select();
+
+    if (error) {
+      console.error('Supabase profile insert error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to save profile',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      id: data[0].id,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Profile-semaforo route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

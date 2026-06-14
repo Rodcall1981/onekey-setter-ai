@@ -311,6 +311,13 @@ function Dashboard() {
   const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
   const [focusedNoteField, setFocusedNoteField] = useState(null); // Para focus automático en "Otra"
 
+  // ESTACIÓN 3: Profile + Semáforo
+  const [profileSemaforo, setProfileSemaforo] = useState(null);
+  const [profileConfirmed, setProfileConfirmed] = useState(false);
+  const [semáforoConfirmed, setSemáforoConfirmed] = useState(false);
+  const [selectedProfile, setSelectedProfile] = useState(null);
+  const [selectedSemaforo, setSelectedSemaforo] = useState(null);
+
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
@@ -386,6 +393,122 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ESTACIÓN 3: Helper functions para detectar perfil y semáforo
+  const detectProfileAndSemaforo = async (sessionId) => {
+    // Leer discovery_responses
+    const discoveryResp = await fetch(`/api/discovery/${sessionId}`);
+    const discovery = await discoveryResp.json();
+
+    if (!discovery.success) {
+      setError('Error al cargar datos de Discovery');
+      return null;
+    }
+
+    const d = discovery.data;
+
+    // Leer valores de business_config
+    const configResp = await fetch('/api/business-config');
+    const configData = await configResp.json();
+    const config = configData.config || {};
+
+    const ufValueClp = parseFloat(config.UF_VALUE_CLP || 41000);
+    const divisor = parseFloat(config.divisor || 200);
+    const greenThreshold = parseFloat(config.threshold_amarillo || 25);
+    const yellowThreshold = parseFloat(config.threshold_rojo || 35);
+
+    // ========== AUTO-DETECT PERFIL ==========
+    // Reglas en orden (primera que calce gana)
+
+    // 1. INVERSIONISTA EXPERTO
+    const hasInvestmentProperties = d.p1_job_description &&
+      (d.p1_job_description.toLowerCase().includes('inversión') ||
+       d.p1_job_description.toLowerCase().includes('propiedad') ||
+       d.p6_emotional_anchors?.includes('Solo rentabilidad'));
+
+    const knowsIndicators = d.p1_job_description &&
+      (d.p1_job_description.toLowerCase().includes('cap rate') ||
+       d.p1_job_description.toLowerCase().includes('roi') ||
+       d.p1_job_description.toLowerCase().includes('plusvalía'));
+
+    const pie_uf = d.p3_down_payment_uf || 0;
+
+    let profileDetected = null;
+    let profileAlt = null;
+
+    if (hasInvestmentProperties && knowsIndicators && pie_uf >= 1500) {
+      profileDetected = 'INVERSIONISTA_EXPERTO';
+    }
+    // 2. INVERSIONISTA
+    else if (
+      (hasInvestmentProperties || pie_uf >= 1000) &&
+      (d.p5_pain_tags?.includes('Perder poder adquisitivo') || d.p6_emotional_anchors?.includes('Solo rentabilidad')) &&
+      (d.p8_readiness_slider >= 7)
+    ) {
+      profileDetected = 'INVERSIONISTA';
+    }
+    // 3. PRIMERA INVERSIÓN
+    else if (
+      !hasInvestmentProperties &&
+      (d.p4_motivation_tags?.length > 0 || d.p5_pain_tags?.length > 0) &&
+      pie_uf >= 500 &&
+      (d.p8_readiness_slider >= 6)
+    ) {
+      profileDetected = 'PRIMERA_INVERSION';
+    }
+    // 4. VIVIENDA PROPIA (o default si dudoso)
+    else {
+      profileDetected = 'VIVIENDA_PROPIA';
+    }
+
+    // Si hay duda: mostrar TOP 2
+    if (!profileDetected || (knowsIndicators && !hasInvestmentProperties)) {
+      // Ambiguo: mostrar Inversionista vs Primera Inversión
+      profileDetected = 'INVERSIONISTA';
+      profileAlt = 'PRIMERA_INVERSION';
+    }
+
+    // ========== AUTO-CALCULATE SEMÁFORO ==========
+    const monthlyIncomeCLP = d.p2_monthly_income_clp || 1;
+    const propertyValueUF = pie_uf * 10; // pie ≈ 10%
+    const estimatedDividendUF = propertyValueUF / divisor;
+
+    // FÓRMULA CORREGIDA: mensual vs mensual, sin anualizar
+    const dividendCLP = estimatedDividendUF * ufValueClp;
+    const dividendToIncomePercent = (dividendCLP / monthlyIncomeCLP) * 100;
+
+    let trafficLight = 'ROJO';
+    let semafiroRationale = '';
+
+    const hasMoreosidades = d.p2_debt_types?.includes('Morosidades');
+    const pieIsAtLeast10Percent = pie_uf >= (propertyValueUF * 0.1);
+
+    if (dividendToIncomePercent <= greenThreshold && !hasMoreosidades && pieIsAtLeast10Percent) {
+      trafficLight = 'VERDE';
+      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta, sin morosidades, pie ${pie_uf.toFixed(2)} UF`;
+    } else if (dividendToIncomePercent <= yellowThreshold && !hasMoreosidades) {
+      trafficLight = 'AMARILLO';
+      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta (25-35%), necesita trabajo de crédito`;
+    } else if (hasMoreosidades) {
+      trafficLight = 'ROJO';
+      semafiroRationale = 'Morosidades activas detectadas';
+    } else if (pie_uf === 0) {
+      trafficLight = 'ROJO';
+      semafiroRationale = 'Sin pie disponible';
+    } else {
+      trafficLight = 'ROJO';
+      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta (>35%)`;
+    }
+
+    return {
+      profileDetected,
+      profileAlt,
+      trafficLight,
+      estimatedDividendUF: estimatedDividendUF.toFixed(2),
+      dividendToIncomePercent: dividendToIncomePercent.toFixed(2),
+      semafiroRationale
+    };
   };
 
   // Helper: calcular rango de pie automáticamente
@@ -465,6 +588,100 @@ function Dashboard() {
   const discoveryCompletedCount = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
   const allDiscoveryComplete = discoveryCompletedCount === 8;
 
+  // ESTACIÓN 3: Guardar Profile + Semáforo y avanzar
+  const saveProfileSemaforoAndProceed = async () => {
+    if (!profileConfirmed || !semáforoConfirmed) {
+      setError('Por favor confirma tanto el perfil como el semáforo');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Guardar en profile_semaforo
+      const profileResp = await fetch('/api/profile-semaforo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          profile_detected: selectedProfile,
+          profile_corrected_by_advisor: selectedProfile !== profileSemaforo.profileDetected ? selectedProfile : null,
+          traffic_light: selectedSemaforo,
+          semaforo_rationale: profileSemaforo.semafiroRationale,
+          estimated_dividend_uf: parseFloat(profileSemaforo.estimatedDividendUF),
+          dividend_to_income_percent: parseFloat(profileSemaforo.dividendToIncomePercent),
+          meeting_1_ended_at: reunionMode === '2_reuniones' ? new Date().toISOString() : null,
+          meeting_2_scheduled_at: null // Se guarda después si es modo 2 reuniones
+        })
+      });
+
+      if (!profileResp.ok) {
+        throw new Error('Error al guardar perfil y semáforo');
+      }
+
+      // Registrar evento 'station_completed' para Estación 3
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          advisor_name: advisorName.trim(),
+          event_type: 'station_completed',
+          station_number: 3
+        })
+      });
+
+      // Registrar evento de corrección si aplica
+      if (selectedProfile !== profileSemaforo.profileDetected) {
+        await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            advisor_name: advisorName.trim(),
+            event_type: 'profile_corrected',
+            station_number: 3,
+            metadata: {
+              original: profileSemaforo.profileDetected,
+              corrected: selectedProfile
+            }
+          })
+        });
+      }
+
+      if (selectedSemaforo !== profileSemaforo.trafficLight) {
+        await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            advisor_name: advisorName.trim(),
+            event_type: 'semaforo_corrected',
+            station_number: 3,
+            metadata: {
+              original: profileSemaforo.trafficLight,
+              corrected: selectedSemaforo
+            }
+          })
+        });
+      }
+
+      // Si modo 2 reuniones: mostrar guión de cierre
+      if (reunionMode === '2_reuniones') {
+        setStep('profile_semaforo_reunion2');
+      } else {
+        // Modo 1 reunión: continuar a Estación 4
+        setStep('estacion_4_placeholder');
+      }
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('saveProfileSemaforoAndProceed error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ESTACIÓN 2: Guardar Discovery
   const saveDiscoveryAndProceed = async () => {
     if (!allDiscoveryComplete) {
@@ -532,6 +749,26 @@ function Dashboard() {
           station_number: 2
         })
       });
+
+      // Registrar evento 'station_started' para Estación 3
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          advisor_name: advisorName.trim(),
+          event_type: 'station_started',
+          station_number: 3
+        })
+      });
+
+      // Auto-detectar perfil y semáforo
+      const profileData = await detectProfileAndSemaforo(sessionId);
+      if (profileData) {
+        setProfileSemaforo(profileData);
+        setSelectedProfile(profileData.profileDetected);
+        setSelectedSemaforo(profileData.trafficLight);
+      }
 
       // Avanzar a Estación 3 (Perfil + Semáforo)
       setStep('profile_semaforo');
@@ -839,6 +1076,120 @@ function Dashboard() {
           disabled: !canProceed || loading,
           style: { flex: 1, padding: '14px', background: canProceed && !loading ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: canProceed && !loading ? 'pointer' : 'not-allowed' }
         }, loading ? 'Iniciando...' : '✓ Consentimiento dado → Continuar a Discovery')
+      ),
+      e(Footer)
+    );
+  }
+
+  // ESTACIÓN 3: PERFIL + SEMÁFORO
+  if (step === 'profile_semaforo' && profileSemaforo) {
+    const profileColors = {
+      'INVERSIONISTA_EXPERTO': '#1b5e20',
+      'INVERSIONISTA': '#2196f3',
+      'PRIMERA_INVERSION': '#ff9800',
+      'VIVIENDA_PROPIA': '#9c27b0'
+    };
+
+    const semaforoColors = {
+      'VERDE': '#1b5e20',
+      'AMARILLO': '#ff9800',
+      'ROJO': '#b71c1c'
+    };
+
+    const profileLabels = {
+      'INVERSIONISTA_EXPERTO': 'Inversionista Experto',
+      'INVERSIONISTA': 'Inversionista',
+      'PRIMERA_INVERSION': 'Primera Inversión',
+      'VIVIENDA_PROPIA': 'Vivienda Propia'
+    };
+
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'profile_semaforo', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
+        // Banner
+        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 3: PERFIL + SEMÁFORO')
+        ),
+
+        // Resumen de capas
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📊 Resumen del Discovery:'),
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', color: '#666' } },
+            e('div', null, '💼 Situación: Renta ' + (discoveryAnswers.p2.monthly_income || 'N/A') + ' CLP, Deuda ' + (discoveryAnswers.p2.total_debt || 'N/A') + ' CLP'),
+            e('div', null, '💰 Pie: ' + (discoveryAnswers.p3.down_payment || '0') + ' CLP (' + (discoveryAnswers.p3.down_payment_uf || '0').toFixed(2) + ' UF)'),
+            e('div', null, '🎯 Motivación: ' + (discoveryAnswers.p4.motivation[0] || 'No especificada')),
+            e('div', null, '⚡ Prontitud: ' + discoveryAnswers.p8.readiness + '/10')
+          )
+        ),
+
+        // PERFIL
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '👤 PERFIL DETECTADO'),
+          e('div', { style: { background: profileColors[profileSemaforo.profileDetected] || '#ccc', color: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center', fontSize: '16px', fontWeight: '600' } }, profileLabels[profileSemaforo.profileDetected]),
+          profileSemaforo.profileAlt && e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px', color: '#666' } },
+            e('p', { style: { margin: '0 0 8px', fontWeight: '600' } }, '⚠️ Ambiguo entre:'),
+            e('div', { style: { display: 'flex', gap: '8px' } },
+              e('button', {
+                onClick: () => setSelectedProfile(profileSemaforo.profileDetected),
+                style: { flex: 1, padding: '8px', background: selectedProfile === profileSemaforo.profileDetected ? profileColors[profileSemaforo.profileDetected] : '#f0f0f0', color: selectedProfile === profileSemaforo.profileDetected ? '#fff' : '#000', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer' }
+              }, profileLabels[profileSemaforo.profileDetected]),
+              e('button', {
+                onClick: () => setSelectedProfile(profileSemaforo.profileAlt),
+                style: { flex: 1, padding: '8px', background: selectedProfile === profileSemaforo.profileAlt ? profileColors[profileSemaforo.profileAlt] : '#f0f0f0', color: selectedProfile === profileSemaforo.profileAlt ? '#fff' : '#000', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer' }
+              }, profileLabels[profileSemaforo.profileAlt])
+            )
+          ),
+          e('div', { style: { display: 'flex', gap: '12px' } },
+            e('button', {
+              onClick: () => setProfileConfirmed(true),
+              style: { flex: 1, padding: '12px', background: profileConfirmed ? '#1b5e20' : '#e0e0e0', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
+            }, profileConfirmed ? '✅ Perfil Confirmado' : '✓ Confirmar Perfil')
+          )
+        ),
+
+        // SEMÁFORO
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '🚦 SEMÁFORO CREDITICIO'),
+          e('div', { style: { background: semaforoColors[profileSemaforo.trafficLight], color: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' } },
+            e('div', { style: { fontSize: '18px', fontWeight: '600', marginBottom: '8px' } },
+              profileSemaforo.trafficLight === 'VERDE' ? '🟢 VERDE' : (profileSemaforo.trafficLight === 'AMARILLO' ? '🟡 AMARILLO' : '🔴 ROJO')
+            ),
+            e('div', { style: { fontSize: '12px' } }, profileSemaforo.semafiroRationale)
+          ),
+          e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '11px', color: '#666' } },
+            'Dividendo: ' + profileSemaforo.dividendToIncomePercent + '% de renta | Pie: ' + profileSemaforo.estimatedDividendUF + ' UF'
+          ),
+          e('div', { style: { display: 'flex', gap: '8px', marginBottom: '16px' } },
+            ['VERDE', 'AMARILLO', 'ROJO'].map(traffic =>
+              e('button', {
+                key: traffic,
+                onClick: () => setSelectedSemaforo(traffic),
+                style: { flex: 1, padding: '8px', background: selectedSemaforo === traffic ? semaforoColors[traffic] : '#f0f0f0', color: selectedSemaforo === traffic ? '#fff' : '#000', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer' }
+              }, traffic === 'VERDE' ? '🟢 Verde' : (traffic === 'AMARILLO' ? '🟡 Amarillo' : '🔴 Rojo'))
+            )
+          ),
+          e('button', {
+            onClick: () => setSemáforoConfirmed(true),
+            style: { width: '100%', padding: '12px', background: semáforoConfirmed ? semaforoColors[selectedSemaforo] : '#e0e0e0', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
+          }, semáforoConfirmed ? '✅ Semáforo Confirmado' : '✓ Confirmar Semáforo')
+        ),
+
+        // Botones de acción
+        e('div', { style: { display: 'flex', gap: '12px' } },
+          e('button', {
+            onClick: () => setStep('questions'),
+            style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, 'Volver a Discovery'),
+          e('button', {
+            onClick: saveProfileSemaforoAndProceed,
+            disabled: !profileConfirmed || !semáforoConfirmed || loading,
+            style: { flex: 1, padding: '14px', background: (profileConfirmed && semáforoConfirmed && !loading) ? '#1b5e20' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: (profileConfirmed && semáforoConfirmed && !loading) ? 'pointer' : 'not-allowed' }
+          }, loading ? 'Guardando...' : '✓ Confirmar Perfil + Semáforo')
+        ),
+
+        error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginTop: '24px', borderLeft: '3px solid #ef5350' } },
+          e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, '❌ ' + error)
+        )
       ),
       e(Footer)
     );
