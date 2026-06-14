@@ -35,7 +35,12 @@
       "Bash(/tmp/final_test.sh)",
       "Bash(git commit -m 'fix: correct p_intention field naming from p_intention to p0 *)",
       "Bash(git commit -m 'fix: remove setSelectedSemaforo reference \\(already deleted state\\) *)",
-      "Bash(git commit -m 'feat: Station 3 complete with buying capacity calculator *)"
+      "Bash(git commit -m 'feat: Station 3 complete with buying capacity calculator *)",
+      "Bash(chmod +x /tmp/test_summary.sh)",
+      "Bash(/tmp/test_summary.sh)",
+      "Bash(curl -s http://localhost:3001/api/discovery/9903a649-9568-45e3-adb3-a219bdda71b0)",
+      "Bash(curl -s -X POST http://localhost:3001/api/sessions -H 'Content-Type: application/json' -d '{\"setter_id\":\"test\",\"client_name\":\"Test\",\"reunion_mode\":\"1_reunion\"}')",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

@@ -238,11 +238,11 @@ router.get('/discovery/:sessionId', async (req, res) => {
       process.env.SUPABASE_KEY
     );
 
-    const { data, error } = await supabase
+    const { data: dataArray, error } = await supabase
       .from('discovery_responses')
       .select('*')
       .eq('session_id', sessionId)
-      .single();
+      .limit(1);
 
     if (error) {
       console.error('Supabase discovery fetch error:', error.message);
@@ -252,9 +252,11 @@ router.get('/discovery/:sessionId', async (req, res) => {
       });
     }
 
+    const data = dataArray && dataArray.length > 0 ? dataArray[0] : {};
+
     res.json({
       success: true,
-      data: data || {}
+      data: data
     });
 
   } catch (error) {
@@ -331,7 +333,11 @@ router.post('/profile-semaforo', async (req, res) => {
       estimated_dividend_uf,
       dividend_to_income_percent,
       meeting_1_ended_at,
-      meeting_2_scheduled_at
+      meeting_2_scheduled_at,
+      loan_term_years,
+      max_loan_amount_clp,
+      affordable_property_uf,
+      estimated_dividend_clp
     } = req.body;
 
     if (!session_id) {
@@ -350,7 +356,11 @@ router.post('/profile-semaforo', async (req, res) => {
       estimated_dividend_uf,
       dividend_to_income_percent,
       meeting_1_ended_at,
-      meeting_2_scheduled_at
+      meeting_2_scheduled_at,
+      loan_term_years,
+      max_loan_amount_clp,
+      affordable_property_uf,
+      estimated_dividend_clp
     };
 
     const { data, error } = await supabase
@@ -374,6 +384,111 @@ router.post('/profile-semaforo', async (req, res) => {
 
   } catch (error) {
     console.error('Profile-semaforo route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 4: Obtener resumen para panel (discovery + perfil + capacidad)
+router.get('/summary/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "sessionId"'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    // Get discovery data
+    const { data: discoveryArray, error: discError } = await supabase
+      .from('discovery_responses')
+      .select('*')
+      .eq('session_id', sessionId)
+      .limit(1);
+
+    const discovery = discoveryArray && discoveryArray.length > 0 ? discoveryArray[0] : null;
+
+    if (discError) {
+      return res.status(500).json({
+        error: 'Failed to fetch discovery',
+        details: discError.message
+      });
+    }
+
+    if (!discovery) {
+      return res.status(404).json({
+        error: 'No discovery data found',
+        details: 'Session ID not found in discovery_responses'
+      });
+    }
+
+    // Get profile + capacity data
+    const { data: profileArray, error: profError } = await supabase
+      .from('profile_semaforo')
+      .select('*')
+      .eq('session_id', sessionId)
+      .limit(1);
+
+    const profile = profileArray && profileArray.length > 0 ? profileArray[0] : null;
+
+    if (profError) {
+      return res.status(500).json({
+        error: 'Failed to fetch profile',
+        details: profError.message
+      });
+    }
+
+    if (!profile) {
+      return res.status(404).json({
+        error: 'No profile data found',
+        details: 'Session ID not found in profile_semaforo'
+      });
+    }
+
+    // Build summary object
+    const summary = {
+      intention: discovery.p_intention || 'N/A',
+      profile: profile.profile_detected,
+      age: discovery.p1_age,
+      jobType: discovery.p1_job_type,
+      jobDescription: discovery.p1_job_description,
+      tenure: discovery.p1_tenure,
+      monthlyIncome: discovery.p2_monthly_income_clp,
+      totalDebt: discovery.p2_total_debt_clp,
+      debtTypes: discovery.p2_debt_types,
+      downPayment: discovery.p3_down_payment_clp,
+      downPaymentUF: discovery.p3_down_payment_uf,
+      motivation: discovery.p4_motivation_tags,
+      pain: discovery.p5_pain_tags,
+      emotionalIntensity: discovery.p5_emotional_intensity_slider,
+      anchors: discovery.p6_emotional_anchors,
+      decisionMakers: discovery.p7_decision_makers,
+      hasHiddenDecision: discovery.p7_has_hidden_decisor,
+      readiness: discovery.p8_readiness_slider,
+      friction: discovery.p8_friction_tags,
+      maxLoan: profile.max_loan_amount_clp,
+      affordablePropertyUF: profile.affordable_property_uf,
+      estimatedDividend: profile.estimated_dividend_clp,
+      loanTermYears: profile.loan_term_years
+    };
+
+    res.json({
+      success: true,
+      summary
+    });
+
+  } catch (error) {
+    console.error('Summary route error:', error);
     res.status(500).json({
       error: 'Server error',
       message: error.message

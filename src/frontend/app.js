@@ -327,6 +327,9 @@ function Dashboard() {
   const [profileConfirmed, setProfileConfirmed] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
 
+  // ESTACIÓN 4: Summary Panel
+  const [summary, setSummary] = useState(null);
+
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
@@ -741,8 +744,8 @@ function Dashboard() {
       if (reunionMode === '2_reuniones') {
         setStep('profile_semaforo_reunion2');
       } else {
-        // Modo 1 reunión: continuar a Estación 4
-        setStep('estacion_4_placeholder');
+        // Modo 1 reunión: continuar a Estación 4 (con resumen)
+        setStep('station_4_summary');
       }
     } catch (err) {
       setError('Error: ' + err.message);
@@ -1251,6 +1254,134 @@ function Dashboard() {
 
         error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginTop: '24px', borderLeft: '3px solid #ef5350' } },
           e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, '❌ ' + error)
+        )
+      ),
+      e(Footer)
+    );
+  }
+
+  // ESTACIÓN 4: RESUMEN (Panel)
+  if (step === 'station_4_summary') {
+    // Cargar resumen si no está cargado
+    React.useEffect(() => {
+      if (!summary && sessionId) {
+        fetch(`/api/summary/${sessionId}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.success && data.summary) {
+              setSummary(data.summary);
+            }
+          })
+          .catch(err => console.error('Summary fetch error:', err));
+      }
+    }, [sessionId, summary]);
+
+    if (!summary) {
+      return e('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
+        e('p', null, 'Cargando resumen...')
+      );
+    }
+
+    const intentionLabel = summary.intention === 'Vivienda propia' ? '🏠 Vivienda Propia'
+                         : summary.intention === 'Segunda vivienda' ? '🏖️ Segunda Vivienda'
+                         : '🏢 Inversión';
+
+    const profileColors = {
+      'INVERSIONISTA_EXPERTO': '#1b5e20',
+      'INVERSIONISTA': '#2196f3',
+      'PRIMERA_INVERSION': '#ff9800',
+      'VIVIENDA_PROPIA': '#9c27b0'
+    };
+
+    const profileLabels = {
+      'INVERSIONISTA_EXPERTO': 'Inversionista Experto',
+      'INVERSIONISTA': 'Inversionista',
+      'PRIMERA_INVERSION': 'Primera Inversión',
+      'VIVIENDA_PROPIA': 'Vivienda Propia'
+    };
+
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'station_4_summary', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '32px', width: '100%' } },
+        // Banner
+        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 4: PROYECTO + PALANCAS + ANCLAJE')
+        ),
+
+        // PANEL DE RESUMEN - Grid de 3 columnas
+        e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
+          // Col 1: INTENCIÓN + PERFIL
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '🎯 Intención'),
+            e('p', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, intentionLabel),
+            e('p', { style: { margin: '0 0 8px', fontSize: '11px', fontWeight: '600', color: '#999', textTransform: 'uppercase' } }, 'Perfil'),
+            e('div', { style: { background: profileColors[summary.profile] || '#ccc', color: '#fff', padding: '8px', borderRadius: '6px', textAlign: 'center', fontSize: '13px', fontWeight: '600' } }, profileLabels[summary.profile])
+          ),
+
+          // Col 2: SITUACIÓN
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '💼 Situación'),
+            e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
+              e('div', null, '📊 ' + summary.jobType + ' • ' + summary.age + ' años'),
+              e('div', null, '💰 Renta: $' + (summary.monthlyIncome || 0).toLocaleString('es-CL')),
+              e('div', null, '📉 Deuda: $' + (summary.totalDebt || 0).toLocaleString('es-CL')),
+              e('div', null, '💳 Pie: $' + (summary.downPayment || 0).toLocaleString('es-CL'))
+            )
+          ),
+
+          // Col 3: MOTIVACIÓN + DOLOR
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '💭 Motivación + Dolor'),
+            e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
+              e('div', null, '🎯 ' + (summary.motivation && summary.motivation[0] ? summary.motivation[0] : 'N/A')),
+              e('div', null, '😣 ' + (summary.pain && summary.pain[0] ? summary.pain[0] : 'N/A')),
+              e('div', null, '💭 Ancla: ' + (summary.anchors && summary.anchors[0] ? summary.anchors[0] : 'N/A'))
+            )
+          )
+        ),
+
+        // Segunda fila: DECISOR + PRONTITUD + CAPACIDAD
+        e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
+          // Decisor
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '👥 Decisor'),
+            e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
+              e('div', null, summary.decisionMakers && summary.decisionMakers.join(', ')),
+              summary.hasHiddenDecision && e('div', { style: { color: '#e67e22', fontWeight: '600', marginTop: '8px' } }, '⚠️ Hay decisor oculto')
+            )
+          ),
+
+          // Prontitud + Frenos
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '⚡ Prontitud'),
+            e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
+              e('div', { style: { fontSize: '18px', fontWeight: '700', color: '#1b5e20' } }, summary.readiness + '/10'),
+              e('div', { style: { marginTop: '8px' } }, summary.friction && summary.friction.length > 0 ? '🔴 Frenos: ' + summary.friction.join(', ') : '✅ Sin frenos')
+            )
+          ),
+
+          // Capacidad
+          e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #1b5e20' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '💳 Capacidad'),
+            e('div', { style: { fontSize: '12px', lineHeight: '1.8', color: '#333' } },
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Crédito: '), '$' + (summary.maxLoan || 0).toLocaleString('es-CL')),
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Propiedad: '), 'UF ' + (summary.affordablePropertyUF || 0).toLocaleString('es-CL', {maximumFractionDigits: 0})),
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Dividendo: '), '$' + (summary.estimatedDividend || 0).toLocaleString('es-CL') + '/mes'),
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Plazo: '), summary.loanTermYears + ' años')
+            )
+          )
+        ),
+
+        // Botón continuar
+        e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px' } },
+          e('button', {
+            onClick: () => setStep('questions'),
+            style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, '← Volver a Discovery'),
+          e('button', {
+            disabled: true,
+            style: { flex: 1, padding: '14px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'default', opacity: 0.7 }
+          }, '✓ Resumen Aprobado')
         )
       ),
       e(Footer)
