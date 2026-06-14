@@ -51,7 +51,7 @@ const DISCOVERY_QUESTIONS = [
     question: '¿Qué te motivó a buscar esto AHORA y no hace 3 años?',
     field: 'p4',
     inputs: {
-      motivation: { type: 'tags', label: 'Motivación', options: ['Juntó capital', 'Cambió situación', 'Miedo a quedar atrás', 'Oportunidad puntual', 'Exploración'] },
+      motivation: { type: 'tags', label: 'Motivación', options: ['Juntó capital', 'Cambió situación', 'Miedo a quedar atrás', 'Oportunidad puntual', 'Exploración', 'Otra'] },
       urgency: { type: 'slider', label: 'Urgencia (1-5)', min: 1, max: 5 }
     },
     help: 'Urgencia real vs exploración.'
@@ -61,7 +61,7 @@ const DISCOVERY_QUESTIONS = [
     question: '¿Y qué pasa si dentro de 3 años sigues sin invertir? ¿Cómo se ve tu situación?',
     field: 'p5',
     inputs: {
-      pain: { type: 'tags', label: 'Dolor', options: ['Quedarse igual', 'Perder poder adquisitivo', 'Frustración', 'Miedo a vejez/retiro', 'Indiferente'] },
+      pain: { type: 'tags', label: 'Dolor', options: ['Quedarse igual', 'Perder poder adquisitivo', 'Frustración', 'Miedo a vejez/retiro', 'Indiferente', 'Otra'] },
       intensity: { type: 'slider', label: 'Intensidad emocional (1-5)', min: 1, max: 5 }
     },
     help: 'Sin dolor con emoción (slider ≥3), el cliente no está listo.'
@@ -71,7 +71,7 @@ const DISCOVERY_QUESTIONS = [
     question: 'Aparte de la rentabilidad, ¿hay alguien específico en quien estés pensando con esto? Hijos, padres, tu retiro.',
     field: 'p6',
     inputs: {
-      anchor: { type: 'tags', label: 'Ancla emocional', options: ['Hijos', 'Pareja', 'Padres', 'Retiro propio', 'Solo rentabilidad'] }
+      anchor: { type: 'tags', label: 'Ancla emocional', options: ['Hijos', 'Pareja', 'Padres', 'Retiro propio', 'Solo rentabilidad', 'Otra'] }
     },
     help: 'La motivación emocional bajo la racional. Combustible para las palancas.'
   },
@@ -299,16 +299,17 @@ function Dashboard() {
 
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
-    p1: { job_description: '', job_type: [], tenure: [] },
-    p2: { monthly_income: '', total_debt: '', debt_types: [] },
-    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false },
-    p4: { motivation: [], urgency: 3 },
-    p5: { pain: [], intensity: 3 },
-    p6: { anchor: [] },
-    p7: { decision_makers: [], hidden_decisor_flag: false },
-    p8: { readiness: 5, friction: [] }
+    p1: { job_description: '', job_type: [], tenure: [], notes: '' },
+    p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
+    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
+    p4: { motivation: [], urgency: 3, notes: '' },
+    p5: { pain: [], intensity: 3, notes: '' },
+    p6: { anchor: [], notes: '' },
+    p7: { decision_makers: [], hidden_decisor_flag: false, notes: '' },
+    p8: { readiness: 5, friction: [], notes: '' }
   });
   const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
+  const [focusedNoteField, setFocusedNoteField] = useState(null); // Para focus automático en "Otra"
 
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
@@ -425,6 +426,13 @@ function Dashboard() {
         p7: { ...prev.p7, hidden_decisor_flag: hasHiddenDecision }
       }));
     }
+
+    // P4, P5, P6: focus automático al campo de notas si se selecciona "Otra"
+    if ((field === 'p4' && key === 'motivation') || (field === 'p5' && key === 'pain') || (field === 'p6' && key === 'anchor')) {
+      if (Array.isArray(value) && value.includes('Otra')) {
+        setFocusedNoteField(field); // Enfocar el campo de notas de esa pregunta
+      }
+    }
   };
 
   // Verificar si una pregunta está completada (al menos un valor)
@@ -468,6 +476,18 @@ function Dashboard() {
     setError(null);
 
     try {
+      // Construir objeto discovery_notes como JSON { "p1": "...", "p2": "...", ... "p8": "" }
+      const discoveryNotes = {
+        p1: discoveryAnswers.p1.notes || '',
+        p2: discoveryAnswers.p2.notes || '',
+        p3: discoveryAnswers.p3.notes || '',
+        p4: discoveryAnswers.p4.notes || '',
+        p5: discoveryAnswers.p5.notes || '',
+        p6: discoveryAnswers.p6.notes || '',
+        p7: discoveryAnswers.p7.notes || '',
+        p8: discoveryAnswers.p8.notes || ''
+      };
+
       // Guardar respuestas de Discovery en Supabase
       const discoveryResponse = await fetch('/api/discovery', {
         method: 'POST',
@@ -482,7 +502,7 @@ function Dashboard() {
           p2_debt_types: discoveryAnswers.p2.debt_types,
           p3_down_payment_clp: discoveryAnswers.p3.down_payment ? parseFloat(discoveryAnswers.p3.down_payment) : null,
           p3_down_payment_uf: discoveryAnswers.p3.down_payment_uf || null,
-          p3_down_payment_range: discoveryAnswers.p3.down_payment_range[0] || null,
+          p3_down_payment_range: discoveryAnswers.p3.down_payment_range || null,
           p4_motivation_tags: discoveryAnswers.p4.motivation,
           p4_urgency_slider: discoveryAnswers.p4.urgency,
           p5_pain_tags: discoveryAnswers.p5.pain,
@@ -491,7 +511,8 @@ function Dashboard() {
           p7_decision_makers: discoveryAnswers.p7.decision_makers,
           p7_has_hidden_decisor: discoveryAnswers.p7.hidden_decisor_flag,
           p8_readiness_slider: discoveryAnswers.p8.readiness,
-          p8_friction_tags: discoveryAnswers.p8.friction
+          p8_friction_tags: discoveryAnswers.p8.friction,
+          discovery_notes: discoveryNotes
         })
       });
 
@@ -857,7 +878,8 @@ function Dashboard() {
                     e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#666' } }, '💡 ' + q.help),
 
                     // Inputs dinámicos según tipo
-                    Object.entries(q.inputs).map(([key, input]) => {
+                    [
+                      ...Object.entries(q.inputs).map(([key, input]) => {
                       // ESPECIAL: P3 (down_payment)
                       if (field === 'p3' && key === 'down_payment') {
                         return e('div', { key, style: { marginBottom: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '6px', border: '1px solid #e0e0e0' } },
@@ -972,9 +994,23 @@ function Dashboard() {
                       }
 
                       return null;
-                    })
-                  );
-                })()
+                    }),
+                      // Campo de notas siempre visible (debajo de los inputs)
+                      e('div', { key: 'notes', style: { marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #eee' } },
+                        e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '6px' } }, '📝 Notas (opcional)'),
+                        e('textarea', {
+                          ref: focusedNoteField === field ? (el) => el && el.focus() : null,
+                          value: answer.notes || '',
+                          onChange: (evt) => updateDiscoveryAnswer(field, 'notes', evt.target.value),
+                          placeholder: 'Resumir lo que respondió el cliente, matices que los tags no cubren...',
+                          rows: 3,
+                          style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none', background: focusedNoteField === field ? '#fffbf0' : '#fff', transition: 'all 0.2s' }
+                        })
+                      )
+                    ];
+                  })()
+                  .flat()
+
               )
             )
           ),
