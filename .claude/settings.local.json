@@ -60,7 +60,8 @@
       "Bash(chmod +x /tmp/test_flow_debug.sh)",
       "Bash(/tmp/test_flow_debug.sh)",
       "Bash(git commit -m 'fix: remove summary from useEffect dependencies to prevent infinite loops *)",
-      "Bash(git commit -m 'fix: add null check for profileSemaforo before accessing properties *)"
+      "Bash(git commit -m 'fix: add null check for profileSemaforo before accessing properties *)",
+      "Bash(git commit -m 'fix: route both reunion modes to Station 4 summary for now *)"
     ]
   }
 }
