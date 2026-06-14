@@ -11,7 +11,8 @@
       "Bash(git commit -m 'feat: Station 1 \\(Apertura\\) fully functional and tested *)",
       "Bash(git commit -m 'feat: add notes field, '\\\\''Otra'\\\\'' tag, and auto-focus for Station 2 \\(Discovery\\) *)",
       "Bash(node --check /Users/a123/Documents/Workspace/onekey-setter-ai/src/frontend/app.js)",
-      "Bash(git commit -m 'fix: syntax error in Discovery notes field rendering *)"
+      "Bash(git commit -m 'fix: syntax error in Discovery notes field rendering *)",
+      "Bash(git commit -m 'feat: Station 2 \\(Discovery\\) fully functional and tested *)"
     ]
   }
 }
