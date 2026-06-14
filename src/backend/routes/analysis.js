@@ -965,4 +965,102 @@ Responde SOLO en JSON:
   }
 });
 
+// ESTACIÓN 6: CIERRE + RESERVA
+router.post('/closing', async (req, res) => {
+  try {
+    const {
+      session_id,
+      closing_type,
+      closing_script_used,
+      reservation_offered,
+      reservation_accepted,
+      reservation_amount_paid_clp,
+      day_0_promise_scheduled_at,
+      advisor_checklist_completed
+    } = req.body;
+
+    if (!session_id || typeof reservation_offered !== 'boolean' || !closing_type) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Requiere: session_id, closing_type, reservation_offered (true/false)'
+      });
+    }
+
+    if (reservation_offered && !reservation_accepted && !day_0_promise_scheduled_at) {
+      // Si ofreció pero no aceptó, day_0 no es requerido
+    } else if (reservation_accepted && !day_0_promise_scheduled_at) {
+      return res.status(400).json({
+        error: 'Missing day 0 scheduling',
+        message: 'Si reservó, requiere agendar day_0_promise_scheduled_at'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // Guardar en closing (sin created_at — usa default now())
+    const closingData = {
+      session_id,
+      closing_type,
+      closing_script_used: closing_script_used || null,
+      reservation_offered,
+      reservation_accepted: reservation_accepted || false,
+      reservation_amount_paid_clp: reservation_amount_paid_clp || null,
+      day_0_promise_scheduled_at: day_0_promise_scheduled_at || null,
+      advisor_checklist_completed: advisor_checklist_completed || false,
+      completed_at: new Date().toISOString()
+    };
+
+    const { data: closingResult, error: closingError } = await supabase
+      .from('closing')
+      .insert([closingData])
+      .select();
+
+    if (closingError) {
+      console.error('Supabase closing insert error:', closingError.message);
+      return res.status(500).json({
+        error: 'Failed to save closing',
+        details: closingError.message
+      });
+    }
+
+    // Registrar evento station_completed (6)
+    const eventData = {
+      session_id,
+      event_type: 'station_completed',
+      station_number: 6,
+      data: {
+        reservation_offered,
+        reservation_accepted,
+        closing_type
+      }
+    };
+
+    const { error: eventError } = await supabase
+      .from('session_events')
+      .insert([eventData]);
+
+    if (eventError) {
+      console.error('Event insert error:', eventError.message);
+      // No fallar si el evento no se guarda, pero loguearlo
+    }
+
+    res.json({
+      success: true,
+      closing: closingResult?.[0],
+      result: reservation_accepted ? 'RESERVÓ' : (reservation_offered ? 'OFRECÍ_NO' : 'NO_OFRECÍ')
+    });
+
+  } catch (error) {
+    console.error('Closing route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

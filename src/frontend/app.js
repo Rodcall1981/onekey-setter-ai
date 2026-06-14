@@ -384,6 +384,13 @@ function Dashboard() {
   const [objectionsResolutionSteps, setObjectionsResolutionSteps] = useState(null);
   const [objectionsGenerating, setObjectionsGenerating] = useState(false);
 
+  // Station 6: Cierre + Reserva
+  const [closingReservationOffered, setClosingReservationOffered] = useState(null); // true/false, sin default
+  const [closingReservationAccepted, setClosingReservationAccepted] = useState(false);
+  const [closingDay0Date, setClosingDay0Date] = useState('');
+  const [closingDay0Time, setClosingDay0Time] = useState('');
+  const [closingSaving, setClosingSaving] = useState(false);
+
   // Load summary when entering Station 4
   React.useEffect(() => {
     if (step === 'station_4_summary' && !summary && sessionId) {
@@ -796,6 +803,128 @@ function Dashboard() {
       setProjectsLoaded(true);
     } catch (err) {
       console.error('Load projects error:', err);
+    }
+  };
+
+  // ESTACIÓN 6: Determinar cierre según perfil y prontitud
+  const getClosingSuggestion = () => {
+    const profile = summary?.profile || 'VIVIENDA_PROPIA';
+    const readiness = discoveryAnswers?.p8?.readiness_slider || 5;
+
+    let suggested = { primary: null, alternative: null };
+
+    // Clasificar según perfil y prontitud
+    if (profile === 'INVERSIONISTA' || profile === 'EXPERTO') {
+      // Analítico
+      suggested.primary = 'ALTERNATIVO';
+      suggested.alternative = 'PREGUNTA_INVERSA';
+    } else if (profile === 'VIVIENDA_PROPIA') {
+      // Emocional (dolor alto típicamente en vivienda propia)
+      suggested.primary = 'ASUMIDO';
+      suggested.alternative = 'PREGUNTA_INVERSA';
+    } else if (profile === 'PRIMERA_INVERSION') {
+      // Procrastinador si prontitud 7-8
+      if (readiness >= 7 && readiness <= 8) {
+        suggested.primary = 'URGENCIA';
+        suggested.alternative = 'ASUMIDO';
+      } else if (readiness >= 9) {
+        // Decisor rápido
+        suggested.primary = 'PREGUNTA_INVERSA';
+        suggested.alternative = 'ASUMIDO';
+      } else {
+        suggested.primary = 'ASUMIDO';
+        suggested.alternative = 'PREGUNTA_INVERSA';
+      }
+    }
+
+    return suggested;
+  };
+
+  // Reset para nueva sesión
+  const resetSession = () => {
+    setStep('apertura');
+    setSessionId(null);
+    setClientName('');
+    setReunionMode('1_reunion');
+    setConsentGiven(false);
+    setDiscoveryAnswers({});
+    setSummary(null);
+    setProjects([]);
+    setCurrentProject({
+      project_number: 1,
+      project_state: 'Blanco',
+      comuna: '',
+      address: '',
+      gmaps_link: '',
+      amenities: '',
+      typologies: '',
+      price_from_uf: '',
+      local_rent_uf: '',
+      appreciation_percent: '',
+      image_urls: []
+    });
+    setProjectsLoaded(false);
+    setClosingReservationOffered(null);
+    setClosingReservationAccepted(false);
+    setClosingDay0Date('');
+    setClosingDay0Time('');
+  };
+
+  // ESTACIÓN 6: Guardar cierre
+  const handleSaveClosing = async (result) => {
+    // result: 'RESERVÓ' | 'OFRECÍ_NO' | 'NO_OFRECÍ'
+
+    if (closingReservationOffered === null) {
+      setError('Debes indicar si ofreciste la reserva (Sí/No)');
+      return;
+    }
+
+    if (closingReservationOffered && !closingDay0Date) {
+      setError('Si se reservó, debes agendar la fecha de promesa');
+      return;
+    }
+
+    setClosingSaving(true);
+    setError(null);
+
+    try {
+      const day0DateTime = closingReservationOffered && closingDay0Date
+        ? `${closingDay0Date}T${closingDay0Time || '14:00'}:00`
+        : null;
+
+      const resp = await fetch('/api/closing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          closing_type: getClosingSuggestion().primary,
+          closing_script_used: null,
+          reservation_offered: closingReservationOffered,
+          reservation_accepted: result === 'RESERVÓ',
+          day_0_promise_scheduled_at: day0DateTime,
+          advisor_checklist_completed: true
+        })
+      });
+
+      if (!resp.ok) {
+        throw new Error('Error al guardar cierre');
+      }
+
+      // Mostrar confirmación y limpiar
+      alert(result === 'RESERVÓ'
+        ? '✅ Reserva registrada. ¡Felicitaciones!'
+        : result === 'OFRECÍ_NO'
+        ? '📝 Registro actualizado. Seguimiento programado.'
+        : '📋 Reunión cerrada sin reserva.');
+
+      // Volver a Station 1 (nueva reunión)
+      setStep('apertura');
+      resetSession();
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('Closing save error:', err);
+    } finally {
+      setClosingSaving(false);
     }
   };
 
@@ -1706,6 +1835,182 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 6: CIERRE + RESERVA
+  if (step === 'station_6_closing') {
+    const closingSuggestion = getClosingSuggestion();
+    const CIERRE_SCRIPTS = {
+      ASUMIDO: {
+        titulo: 'Cierre Asumido (Cardone)',
+        guion: [
+          '"Perfecto. ¿Ponemos la reserva el viernes o prefieres el lunes?"',
+          '"¿La promesa la firmamos en notaría de Providencia o más cerca de tu casa?"'
+        ]
+      },
+      ALTERNATIVO: {
+        titulo: 'Cierre Alternativo',
+        guion: [
+          '"¿Empezamos con el modelo de 1D o el de 2D?"',
+          '"¿Te conviene financiar 80% o 90%?"'
+        ]
+      },
+      URGENCIA: {
+        titulo: 'Cierre por Urgencia',
+        guion: [
+          '"Las unidades de este modelo están limitadas. La inmobiliaria sube lista el [fecha real]. Si quieres asegurar esta UF, hay que reservar antes."'
+        ]
+      },
+      PREGUNTA_INVERSA: {
+        titulo: 'Cierre por Pregunta Inversa (Ziglar)',
+        guion: [
+          '"¿Te gustaría tener una propiedad que te genere UF [X] al año desde [año]?"',
+          '"Entonces lo único que decidimos hoy es si lo haces conmigo o con otro. Y eso ya lo decidiste hace 30 minutos cuando dijiste que confiabas en el análisis. ¿Vamos?"'
+        ]
+      }
+    };
+
+    const RESERVATION_SCRIPTS = {
+      VIVIENDA_PROPIA: '"...por 100 lucas reembolsables, durante 7 días esta casa es tuya para decidir con calma, sin que nadie te la quite. Es comprarte tranquilidad, no comprometerte."',
+      PRIMERA_INVERSION: '"...y en esos 7 días no estás solo: te acompaño paso a paso, vemos juntos la pre-aprobación, resolvemos dudas, y recién ahí decides. La reserva solo asegura que la unidad te espere mientras hacemos ese trabajo juntos."',
+      INVERSIONISTA: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF [X] de upside. ¿La tomamos?"',
+      EXPERTO: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF [X] de upside. ¿La tomamos?"'
+    };
+
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'station_6', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
+        e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '✅ ESTACIÓN 6: CIERRE + RESERVA')
+        ),
+
+        // Cierre sugerido
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+          e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '🎯 Cierre Sugerido'),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } },
+            e('div', { style: { padding: '12px', background: '#e8f5e9', borderLeft: '3px solid #1b5e20', borderRadius: '4px' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20' } }, '⭐ DESTACADO'),
+              e('p', { style: { margin: '0 0 8px', fontSize: '14px', fontWeight: '600', color: '#000' } }, CIERRE_SCRIPTS[closingSuggestion.primary]?.titulo),
+              ...CIERRE_SCRIPTS[closingSuggestion.primary]?.guion.map(g =>
+                e('p', { style: { margin: '8px 0', fontSize: '13px', color: '#333', fontStyle: 'italic' } }, g)
+              )
+            ),
+            e('div', { style: { padding: '12px', background: '#f5f5f5', borderLeft: '3px solid #999', borderRadius: '4px' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#666' } }, 'ALTERNATIVO'),
+              e('p', { style: { margin: '0 0 8px', fontSize: '14px', fontWeight: '600', color: '#000' } }, CIERRE_SCRIPTS[closingSuggestion.alternative]?.titulo),
+              ...CIERRE_SCRIPTS[closingSuggestion.alternative]?.guion.map(g =>
+                e('p', { style: { margin: '8px 0', fontSize: '13px', color: '#333', fontStyle: 'italic' } }, g)
+              )
+            )
+          )
+        ),
+
+        // Pedido de reserva
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+          e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '💰 Pedido de Reserva'),
+          e('div', { style: { background: '#f9f9f9', padding: '12px', borderRadius: '6px', marginBottom: '16px' } },
+            e('p', { style: { margin: '0 0 8px', fontSize: '13px', color: '#333', lineHeight: '1.6' } },
+              '"[Nombre], te propongo algo. No me digas hoy si compras. Dime si quieres congelar esta unidad. La reserva son $100.000, completamente reembolsables, y te guarda el departamento 7 días. Si en esos 7 días decides que no, te devuelvo el 100% y quedamos igual de bien. Lo único que no puedo hacer es guardártela gratis — si mañana otro la quiere, se va. ¿La congelamos? Te paso el link y queda en 2 minutos."'
+            ),
+            e('p', { style: { margin: '8px 0 0', fontSize: '12px', color: '#666', fontStyle: 'italic' } },
+              RESERVATION_SCRIPTS[summary?.profile || 'VIVIENDA_PROPIA']
+            )
+          )
+        ),
+
+        // Checklist obligatorio
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+          e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📋 Checklist de Salida (Obligatorio)'),
+
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#000' } }, '1. ¿Ofreciste la reserva?'),
+            e('div', { style: { display: 'flex', gap: '8px' } },
+              e('button', {
+                onClick: () => setClosingReservationOffered(true),
+                style: {
+                  flex: 1,
+                  padding: '10px',
+                  background: closingReservationOffered === true ? '#1b5e20' : '#f0f0f0',
+                  color: closingReservationOffered === true ? '#fff' : '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }
+              }, '✓ Sí'),
+              e('button', {
+                onClick: () => setClosingReservationOffered(false),
+                style: {
+                  flex: 1,
+                  padding: '10px',
+                  background: closingReservationOffered === false ? '#d32f2f' : '#f0f0f0',
+                  color: closingReservationOffered === false ? '#fff' : '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '13px'
+                }
+              }, '✗ No')
+            )
+          ),
+
+          closingReservationOffered && (
+            e('div', { style: { marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '6px' } },
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#000' } }, '2. Agendar Día 0 (firma de promesa)'),
+              e('div', { style: { display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' } },
+                e('input', {
+                  type: 'date',
+                  value: closingDay0Date,
+                  onChange: (evt) => setClosingDay0Date(evt.target.value),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                }),
+                e('input', {
+                  type: 'time',
+                  value: closingDay0Time,
+                  onChange: (evt) => setClosingDay0Time(evt.target.value),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                })
+              )
+            )
+          )
+        ),
+
+        // Botón para objeción
+        closingReservationOffered === true && (
+          e('div', { style: { marginBottom: '24px' } },
+            e('button', {
+              onClick: () => setStep('station_5_objections'),
+              style: { width: '100%', padding: '12px', background: '#ff9800', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+            }, '⚠️ Apareció una objeción (desde Station 6)')
+          )
+        ),
+
+        error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', borderRadius: '6px', padding: '12px', marginBottom: '16px', color: '#c62828', fontSize: '13px' } }, error),
+
+        // Botones de salida
+        e('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+          e('button', {
+            onClick: () => { setClosingReservationAccepted(true); handleSaveClosing('RESERVÓ'); },
+            disabled: closingSaving || closingReservationOffered === null || (closingReservationOffered && !closingDay0Date),
+            style: { flex: 1, padding: '12px', background: closingSaving ? '#ccc' : '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', minWidth: '150px' }
+          }, closingSaving ? '⏳ Guardando...' : '✅ Reservó'),
+          e('button', {
+            onClick: () => handleSaveClosing('OFRECÍ_NO'),
+            disabled: closingSaving || closingReservationOffered === null,
+            style: { flex: 1, padding: '12px', background: closingSaving ? '#ccc' : '#ff9800', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', minWidth: '150px' }
+          }, 'Ofrecí y dijo no'),
+          e('button', {
+            onClick: () => handleSaveClosing('NO_OFRECÍ'),
+            disabled: closingSaving,
+            style: { flex: 1, padding: '12px', background: closingSaving ? '#ccc' : '#999', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px', minWidth: '150px' }
+          }, 'No alcancé a ofrecer')
+        )
+      ),
+      e(Footer)
+    );
+  }
+
   // ESTACIÓN 5: OBJECIONES
   if (step === 'station_5_objections') {
     const PREBUILT_OBJECTIONS = {
@@ -1956,9 +2261,9 @@ function Dashboard() {
             style: { padding: '12px 24px', background: '#fff', border: '1px solid #ff9800', color: '#ff9800', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
           }, '⚠️ Apareció una objeción'),
           e('button', {
-            onClick: () => { /* TODO: Cierre y siguiente flujo */ setStep('apertura'); },
+            onClick: () => setStep('station_6_closing'),
             style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-          }, 'Finalizar presentación →')
+          }, '→ Cierre + Reserva')
         )
       ),
       e(Footer)
