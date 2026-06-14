@@ -112,9 +112,9 @@ router.get('/my-sessions/:setterId', async (req, res) => {
     // Obtener sesiones del setter, últimas 15, ordenadas por fecha
     const { data: sessions, error } = await supabase
       .from('sessions')
-      .select('id, client_name, reunion_mode, created_at, updated_at')
+      .select('id, client_name, reunion_mode, created_at')
       .eq('setter_id', setterId)
-      .order('updated_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(15);
 
     if (error) {
@@ -171,7 +171,6 @@ router.get('/my-sessions/:setterId', async (req, res) => {
         progress: progress,
         stage: stage,
         has_projects: (projects || []).length > 0,
-        updated_at: session.updated_at,
         created_at: session.created_at
       };
     }));

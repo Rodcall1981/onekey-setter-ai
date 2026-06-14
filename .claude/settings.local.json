@@ -64,7 +64,15 @@
       "Bash(git commit -m 'fix: route both reunion modes to Station 4 summary for now *)",
       "Bash(npm install *)",
       "Bash(git commit -m 'feat: add backend endpoint for secure image upload to Storage *)",
-      "Bash(git commit -m 'feat: add session recovery dashboard for 2-reunion workflow *)"
+      "Bash(git commit -m 'feat: add session recovery dashboard for 2-reunion workflow *)",
+      "Bash(curl -s http://localhost:3000/)",
+      "Bash(pkill -9 -f \"npm start\")",
+      "Bash(pkill -9 node)",
+      "Bash(pkill -9 npm)",
+      "Bash(curl -s http://localhost:3001/api/summary/test)",
+      "Bash(pkill -9 -f \"src/backend/server\")",
+      "Bash(curl -s \"http://localhost:3001/api/my-sessions/test\")",
+      "Bash(git commit -m 'fix: remove non-existent updated_at column from sessions query *)"
     ]
   }
 }
