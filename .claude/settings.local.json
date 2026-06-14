@@ -97,7 +97,8 @@
       "Bash(git commit -m 'design: upgrade project cards to professional marketplace style *)",
       "Bash(curl -s http://localhost:3001/api/admin/catalog)",
       "Bash(git commit -m 'fix: auto-load admin catalog and sanitize image filenames *)",
-      "Bash(git commit -m 'feat: integrate catalog into Station 4 project selection *)"
+      "Bash(git commit -m 'feat: integrate catalog into Station 4 project selection *)",
+      "Bash(git commit -m 'refactor: multi-select catalog with filters for Station 4 Part B *)"
     ]
   }
 }

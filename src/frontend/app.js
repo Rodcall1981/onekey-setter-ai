@@ -398,6 +398,8 @@ function Dashboard() {
   const [adminCatalogLoading, setAdminCatalogLoading] = useState(false);
   const [station4Catalog, setStation4Catalog] = useState([]);
   const [station4CatalogLoading, setStation4CatalogLoading] = useState(false);
+  const [station4CatalogFilter, setStation4CatalogFilter] = useState('');
+  const [station4SelectedProjects, setStation4SelectedProjects] = useState(new Set());
   const [adminNewProject, setAdminNewProject] = useState({
     project_name: '',
     project_state: 'Blanco',
@@ -1049,17 +1051,16 @@ function Dashboard() {
                           : project.project_state === 'Entrega inmediata' ? '#3498db' : '#95a5a6';
 
     return e('div', {
-      onClick,
       style: {
         background: '#fff',
         borderRadius: '12px',
         overflow: 'hidden',
         boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-        cursor: 'pointer',
         transition: 'all 0.3s ease',
         border: isSelected ? '3px solid #1b5e20' : '1px solid #e0e0e0',
         transform: 'translateY(0)',
-        ':hover': { transform: 'translateY(-8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }
+        display: 'flex',
+        flexDirection: 'column'
       },
       onMouseEnter: (evt) => {
         evt.currentTarget.style.transform = 'translateY(-8px)';
@@ -1080,8 +1081,8 @@ function Dashboard() {
         e('div', { style: { position: 'absolute', top: '12px', right: '12px', background: stateBadgeColor, color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' } }, project.project_state)
       ),
 
-      // Contenido
-      e('div', { style: { padding: '16px' } },
+      // Contenido - flex para llenar espacio
+      e('div', { style: { padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' } },
         // Nombre + ubicación
         e('h3', { style: { margin: '0 0 8px', fontSize: '16px', fontWeight: '700', color: '#000' } }, project.project_name || 'Proyecto'),
         e('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px', fontSize: '13px', color: '#666' } },
@@ -1110,8 +1111,9 @@ function Dashboard() {
           )
         ),
 
-        // CTA Button
+        // CTA Button - siempre al final
         e('button', {
+          onClick,
           style: {
             width: '100%',
             padding: '12px',
@@ -1123,7 +1125,7 @@ function Dashboard() {
             fontWeight: '700',
             fontSize: '13px',
             transition: 'all 0.2s',
-            marginTop: '4px'
+            marginTop: 'auto'
           },
           onMouseEnter: (evt) => evt.currentTarget.style.background = isSelected ? '#0d3a0f' : '#1a1a1a',
           onMouseLeave: (evt) => evt.currentTarget.style.background = isSelected ? '#1b5e20' : '#000'
@@ -2180,18 +2182,61 @@ function Dashboard() {
         // Catálogo de proyectos disponibles
         station4Catalog.length > 0 && (
           e('div', { style: { marginBottom: '32px' } },
-            e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '🎯 Proyectos Disponibles del Catálogo'),
-            e('p', { style: { margin: '0 0 16px', fontSize: '13px', color: '#666' } }, 'Clickea uno para pre-rellenar el formulario o carga uno manualmente abajo'),
-            e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' } },
-              ...station4Catalog.map((proj, idx) =>
-                e(ProjectCard, {
-                  key: idx,
-                  project: proj,
-                  isSelected: false,
-                  onClick: () => selectProjectFromCatalog(proj)
-                })
+            e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '🎯 Proyectos Disponibles'),
+            e('p', { style: { margin: '0 0 16px', fontSize: '13px', color: '#666' } }, 'Selecciona los que quieres mostrar al cliente (pueden ser múltiples)'),
+
+            // Filtro por comuna
+            e('div', { style: { marginBottom: '20px', display: 'flex', gap: '12px', alignItems: 'center' } },
+              e('label', { style: { fontSize: '13px', fontWeight: '600', color: '#000' } }, 'Filtrar por comuna:'),
+              e('select', {
+                value: station4CatalogFilter,
+                onChange: (evt) => setStation4CatalogFilter(evt.target.value),
+                style: { padding: '10px 12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontWeight: '500', backgroundColor: '#fff', cursor: 'pointer' }
+              },
+                e('option', { value: '' }, '📍 Todas las comunas'),
+                ...Array.from(new Set(station4Catalog.map(p => p.comuna))).map(comuna =>
+                  e('option', { value: comuna }, comuna)
+                )
               )
             ),
+
+            // Grid de fichas filtradas
+            e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' } },
+              ...station4Catalog
+                .filter(proj => !station4CatalogFilter || proj.comuna === station4CatalogFilter)
+                .map((proj, idx) =>
+                  e(ProjectCard, {
+                    key: idx,
+                    project: proj,
+                    isSelected: station4SelectedProjects.has(proj.id),
+                    onClick: () => {
+                      const newSelected = new Set(station4SelectedProjects);
+                      if (newSelected.has(proj.id)) {
+                        newSelected.delete(proj.id);
+                      } else {
+                        newSelected.add(proj.id);
+                      }
+                      setStation4SelectedProjects(newSelected);
+                    }
+                  })
+                )
+            ),
+
+            station4SelectedProjects.size > 0 && (
+              e('div', { style: { background: '#e8f5e9', border: '1px solid #c8e6c9', borderRadius: '8px', padding: '16px', marginBottom: '32px' } },
+                e('p', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '700', color: '#1b5e20' } }, '✓ ' + station4SelectedProjects.size + ' proyecto(s) seleccionado(s)'),
+                e('button', {
+                  onClick: () => {
+                    setProjects(station4Catalog.filter(p => station4SelectedProjects.has(p.id)));
+                    setStation4SelectedProjects(new Set());
+                    setStation4CatalogFilter('');
+                    setStep('station_4_projects_view');
+                  },
+                  style: { padding: '10px 20px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }
+                }, '→ Continuar con proyectos seleccionados')
+              )
+            ),
+
             e('hr', { style: { border: 'none', borderTop: '2px solid #ddd', margin: '32px 0' } }),
             e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '✏️ O Carga Manualmente')
           )
