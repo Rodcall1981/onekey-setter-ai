@@ -857,6 +857,11 @@ function Dashboard() {
       return;
     }
 
+    if (!profileSemaforo) {
+      setError('Error: No se detectó el perfil. Recarga la página e intenta de nuevo.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

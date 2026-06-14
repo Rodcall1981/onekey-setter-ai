@@ -59,7 +59,8 @@
       "Bash(git commit -m 'fix: add Supabase SDK to frontend and fix image upload client initialization *)",
       "Bash(chmod +x /tmp/test_flow_debug.sh)",
       "Bash(/tmp/test_flow_debug.sh)",
-      "Bash(git commit -m 'fix: remove summary from useEffect dependencies to prevent infinite loops *)"
+      "Bash(git commit -m 'fix: remove summary from useEffect dependencies to prevent infinite loops *)",
+      "Bash(git commit -m 'fix: add null check for profileSemaforo before accessing properties *)"
     ]
   }
 }
