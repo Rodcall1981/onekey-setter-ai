@@ -996,6 +996,99 @@ function Dashboard() {
     }
   };
 
+  // HELPER: Renderizar ficha de proyecto (estilo marketplace)
+  const ProjectCard = ({ project, isSelected, onClick }) => {
+    const mainImage = project.image_urls && project.image_urls.length > 0 ? project.image_urls[0] : null;
+    const priceFormatted = project.price_from_uf ? 'UF ' + parseInt(project.price_from_uf).toLocaleString('es-CL') : 'Consultar';
+
+    const stateBadgeColor = project.project_state === 'Blanco' ? '#e74c3c'
+                          : project.project_state === 'Verde' ? '#27ae60'
+                          : project.project_state === 'Entrega inmediata' ? '#3498db' : '#95a5a6';
+
+    return e('div', {
+      onClick,
+      style: {
+        background: '#fff',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+        cursor: 'pointer',
+        transition: 'all 0.3s ease',
+        border: isSelected ? '3px solid #1b5e20' : '1px solid #e0e0e0',
+        transform: 'translateY(0)',
+        ':hover': { transform: 'translateY(-8px)', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }
+      },
+      onMouseEnter: (evt) => {
+        evt.currentTarget.style.transform = 'translateY(-8px)';
+        evt.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+      },
+      onMouseLeave: (evt) => {
+        evt.currentTarget.style.transform = 'translateY(0)';
+        evt.currentTarget.style.boxShadow = '0 2px 12px rgba(0,0,0,0.08)';
+      }
+    },
+      // Imagen principal con overlay
+      e('div', { style: { position: 'relative', width: '100%', height: '220px', background: '#f0f0f0', overflow: 'hidden' } },
+        mainImage ? e('img', {
+          src: mainImage,
+          style: { width: '100%', height: '100%', objectFit: 'cover' }
+        }) : e('div', { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' } }, '📸'),
+        // Badge de estado
+        e('div', { style: { position: 'absolute', top: '12px', right: '12px', background: stateBadgeColor, color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' } }, project.project_state)
+      ),
+
+      // Contenido
+      e('div', { style: { padding: '16px' } },
+        // Nombre + ubicación
+        e('h3', { style: { margin: '0 0 8px', fontSize: '16px', fontWeight: '700', color: '#000' } }, project.project_name || 'Proyecto'),
+        e('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px', fontSize: '13px', color: '#666' } },
+          e('span', null, '📍'),
+          e('span', null, project.comuna || 'Comuna')
+        ),
+
+        // Precio destacado
+        e('div', { style: { background: '#f9f9f9', padding: '12px', borderRadius: '8px', marginBottom: '12px', textAlign: 'center' } },
+          e('p', { style: { margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#999', textTransform: 'uppercase' } }, 'Precio desde'),
+          e('p', { style: { margin: '0', fontSize: '18px', fontWeight: '700', color: '#1b5e20' } }, priceFormatted)
+        ),
+
+        // Specs rápidas
+        project.typologies && (
+          e('div', { style: { marginBottom: '12px', fontSize: '12px', color: '#666' } },
+            e('p', { style: { margin: '0 0 4px', fontWeight: '600' } }, '🏗️ Tipologías'),
+            e('p', { style: { margin: '0', color: '#999' } }, project.typologies.substring(0, 60) + (project.typologies.length > 60 ? '...' : ''))
+          )
+        ),
+
+        project.amenities && (
+          e('div', { style: { marginBottom: '12px', fontSize: '12px', color: '#666' } },
+            e('p', { style: { margin: '0 0 4px', fontWeight: '600' } }, '✨ Amenities'),
+            e('p', { style: { margin: '0', color: '#999' } }, project.amenities.substring(0, 60) + (project.amenities.length > 60 ? '...' : ''))
+          )
+        ),
+
+        // CTA Button
+        e('button', {
+          style: {
+            width: '100%',
+            padding: '12px',
+            background: isSelected ? '#1b5e20' : '#000',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: '700',
+            fontSize: '13px',
+            transition: 'all 0.2s',
+            marginTop: '4px'
+          },
+          onMouseEnter: (evt) => evt.currentTarget.style.background = isSelected ? '#0d3a0f' : '#1a1a1a',
+          onMouseLeave: (evt) => evt.currentTarget.style.background = isSelected ? '#1b5e20' : '#000'
+        }, isSelected ? '✓ SELECCIONADO' : '→ COTIZAR')
+      )
+    );
+  };
+
   // Reset para nueva sesión
   const resetSession = () => {
     setStep('apertura');
@@ -2518,111 +2611,102 @@ function Dashboard() {
 
   // ESTACIÓN 4: PARTE C - Vista de Proyectos
   if (step === 'station_4_projects_view') {
-    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' } },
       e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
-      e('main', { style: { flex: 1, maxWidth: '1100px', margin: '0 auto', padding: '32px', width: '100%' } },
+      e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '40px 24px', width: '100%' } },
         // Banner
-        e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
-          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📋 ESTACIÓN 4 PARTE C: PRESENTACIÓN DE PROYECTOS')
+        e('div', { style: { background: 'linear-gradient(135deg, #1b5e20 0%, #0d3a0f 100%)', color: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' } },
+          e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', letterSpacing: '1px', textTransform: 'uppercase', opacity: '0.9' } }, '📊 ESTACIÓN 4'),
+          e('h1', { style: { margin: '0', fontSize: '28px', fontWeight: '700' } }, 'Proyectos Disponibles'),
+          e('p', { style: { margin: '8px 0 0', fontSize: '13px', opacity: '0.9' } }, 'Selecciona uno para continuar al cotizador')
         ),
 
-        // Tabs de proyectos
-        projects && projects.length > 0 ? e('div', null,
-          // Tab headers
-          e('div', { style: { display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #ddd', paddingBottom: '0' } },
-            ...projects.map((proj, idx) =>
-              e('button', {
-                onClick: () => setCurrentProject(proj),
-                style: {
-                  padding: '12px 20px',
-                  background: currentProject.project_number === proj.project_number ? '#1b5e20' : '#fff',
-                  color: currentProject.project_number === proj.project_number ? '#fff' : '#000',
-                  border: '1px solid #ddd',
-                  borderBottom: 'none',
-                  borderRadius: '6px 6px 0 0',
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  transition: 'all 0.2s'
-                }
-              }, 'Proyecto ' + (idx + 1))
-            )
-          ),
+        // Grid de fichas
+        projects && projects.length > 0 ? e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' } },
+          ...projects.map((proj, idx) =>
+            e(ProjectCard, {
+              key: idx,
+              project: proj,
+              isSelected: currentProject.project_number === proj.project_number,
+              onClick: () => setCurrentProject(proj)
+            })
+          )
+        ) : (
+          e('div', { style: { background: '#fff', borderRadius: '12px', padding: '60px 24px', textAlign: 'center', color: '#999', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' } },
+            e('p', { style: { fontSize: '16px', margin: '0' } }, '📭 No hay proyectos cargados')
+          )
+        ),
 
-          // Tab content - Selected project card
-          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } },
-            // Título
-            e('h2', { style: { margin: '0 0 20px', color: '#000', fontSize: '18px', fontWeight: '600' } }, 'Proyecto ' + currentProject.project_number),
+        // Panel de detalles si hay proyecto seleccionado
+        currentProject && projects.length > 0 && (
+          e('div', { style: { background: '#fff', borderRadius: '12px', padding: '32px', boxShadow: '0 4px 15px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+            // Encabezado
+            e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '2px solid #f0f0f0' } },
+              e('h2', { style: { margin: '0', fontSize: '22px', fontWeight: '700', color: '#000' } }, currentProject.project_name || 'Proyecto'),
+              e('div', { style: { fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '📍 ' + (currentProject.comuna || 'Comuna') + ' • ' + (currentProject.project_state || 'Estado'))
+            ),
 
-            // Grid 2 columnas
-            e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' } },
-              // Columna izquierda - Datos principales
+            // Grid 2 columnas - Detalles
+            e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', marginBottom: '24px' } },
+              // Columna 1
               e('div', null,
-                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '📍 Ubicación'),
-                e('div', { style: { fontSize: '14px', lineHeight: '1.6', color: '#333' } },
-                  e('p', { style: { margin: '0 0 4px' } }, '🏠 Estado: ' + (currentProject.project_state || 'N/A')),
-                  e('p', { style: { margin: '0 0 4px' } }, '🏘️ Comuna: ' + (currentProject.comuna || 'N/A')),
-                  e('p', { style: { margin: '0 0 8px' } }, '🛣️ Dirección: ' + (currentProject.address || 'N/A')),
-                  currentProject.gmaps_link && e('a', { href: currentProject.gmaps_link, target: '_blank', style: { color: '#1b5e20', textDecoration: 'none', fontWeight: '500' } }, '→ Ver en Google Maps')
+                e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '💰 Información Financiera'),
+                e('div', { style: { fontSize: '14px', lineHeight: '2', color: '#333' } },
+                  e('p', { style: { margin: '0', fontWeight: '500' } }, '💵 Precio desde: ' + (currentProject.price_from_uf ? 'UF ' + parseInt(currentProject.price_from_uf).toLocaleString('es-CL') : 'Consultar')),
+                  currentProject.local_rent_uf && e('p', { style: { margin: '0' } }, '🏪 Arriendo zona: UF ' + currentProject.local_rent_uf),
+                  currentProject.appreciation_percent && e('p', { style: { margin: '0' } }, '📈 Apreciación: ' + currentProject.appreciation_percent + '%')
                 ),
 
-                e('hr', { style: { border: 'none', borderTop: '1px solid #eee', margin: '16px 0' } }),
+                e('hr', { style: { border: 'none', borderTop: '1px solid #eee', margin: '24px 0' } }),
 
-                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '💰 Valores'),
-                e('div', { style: { fontSize: '14px', lineHeight: '1.6', color: '#333' } },
-                  e('p', { style: { margin: '0 0 4px' } }, '💵 Desde: UF ' + (currentProject.price_from_uf || 'N/A')),
-                  currentProject.local_rent_uf && e('p', { style: { margin: '0 0 4px' } }, '🏪 Arriendo local: UF ' + currentProject.local_rent_uf),
-                  currentProject.appreciation_percent && e('p', { style: { margin: '0' } }, '📈 Apreciación: ' + currentProject.appreciation_percent + '%')
+                e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '🏗️ Características'),
+                currentProject.typologies && e('div', { style: { marginBottom: '16px' } },
+                  e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, 'Tipologías'),
+                  e('p', { style: { margin: '0', fontSize: '13px', color: '#333', lineHeight: '1.6' } }, currentProject.typologies)
+                ),
+                currentProject.amenities && e('div', null,
+                  e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, 'Amenities'),
+                  e('p', { style: { margin: '0', fontSize: '13px', color: '#333', lineHeight: '1.6' } }, currentProject.amenities)
                 )
               ),
 
-              // Columna derecha - Detalles
+              // Columna 2
               e('div', null,
-                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '🏗️ Detalles'),
-                e('div', { style: { fontSize: '14px', lineHeight: '1.8', color: '#333' } },
-                  e('p', { style: { margin: '0 0 8px' } }, '📐 Tipologías:'),
-                  e('p', { style: { margin: '0 0 12px', color: '#666', fontSize: '13px' } }, currentProject.typologies || 'No especificadas'),
+                e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '📍 Ubicación'),
+                e('div', { style: { fontSize: '14px', lineHeight: '2', color: '#333' } },
+                  e('p', { style: { margin: '0' } }, '🏘️ Comuna: ' + (currentProject.comuna || 'N/A')),
+                  e('p', { style: { margin: '0' } }, '🛣️ Dirección: ' + (currentProject.address || 'N/A')),
+                  currentProject.gmaps_link && e('a', { href: currentProject.gmaps_link, target: '_blank', style: { color: '#1b5e20', textDecoration: 'none', fontWeight: '600', fontSize: '13px' } }, '→ Ver en Google Maps')
+                ),
 
-                  currentProject.amenities && (
-                    e('p', { style: { margin: '0 0 8px' } }, '✨ Amenities:'),
-                    e('p', { style: { margin: '0 0 12px', color: '#666', fontSize: '13px' } }, currentProject.amenities)
-                  )
-                )
-              )
-            ),
-
-            // Imágenes si existen
-            currentProject.image_urls && currentProject.image_urls.length > 0 && (
-              e('div', null,
-                e('hr', { style: { border: 'none', borderTop: '1px solid #eee', margin: '20px 0' } }),
-                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '📸 Galería'),
-                e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' } },
-                  ...currentProject.image_urls.map(url =>
-                    e('img', { src: url, style: { width: '100%', height: '200px', objectFit: 'cover', borderRadius: '6px' } })
+                currentProject.image_urls && currentProject.image_urls.length > 0 && (
+                  e('div', { style: { marginTop: '24px' } },
+                    e('h3', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '📸 Galería'),
+                    e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' } },
+                      ...currentProject.image_urls.slice(0, 6).map(url =>
+                        e('img', { src: url, style: { width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0e0e0' } })
+                      )
+                    )
                   )
                 )
               )
             )
-          )
-        ) : (
-          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '32px', textAlign: 'center', color: '#999' } },
-            e('p', null, 'No hay proyectos cargados')
           )
         ),
 
         // Botones de acción
-        e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' } },
+        e('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' } },
           e('button', {
             onClick: () => setStep('station_4_projects_form'),
-            style: { padding: '12px 24px', background: '#fff', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-          }, '← Agregar más proyectos'),
+            style: { padding: '14px 28px', background: '#fff', border: '2px solid #1b5e20', color: '#1b5e20', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
+          }, '➕ Cargar más proyectos'),
           e('button', {
             onClick: () => setStep('station_5_objections'),
-            style: { padding: '12px 24px', background: '#fff', border: '1px solid #ff9800', color: '#ff9800', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-          }, '⚠️ Apareció una objeción'),
+            style: { padding: '14px 28px', background: '#fff', border: '2px solid #ff9800', color: '#ff9800', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
+          }, '⚠️ Objeción'),
           e('button', {
             onClick: () => setStep('station_6_closing'),
-            style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+            style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
           }, '→ Cierre + Reserva')
         )
       ),

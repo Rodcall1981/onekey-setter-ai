@@ -93,7 +93,8 @@
       "Bash(curl -X POST http://localhost:3001/api/admin/catalog -H 'Content-Type: application/json' -H 'X-Admin-Secret: miSecretoSuperLargoY_Complejo123456789!@#$' -d '{\"project_name\":\"Test\",\"comuna\":\"Santiago\",\"address\":\"Calle 1\"}')",
       "Bash(curl -X GET http://localhost:3001/health)",
       "Bash(curl -X POST http://localhost:3001/api/admin/catalog -H 'Content-Type: application/json' -H 'X-Admin-Secret: AdminSecret2024Secure' -d '{\"project_name\":\"Test\",\"comuna\":\"Santiago\",\"address\":\"Calle 1\",\"project_state\":\"Blanco\",\"gmaps_link\":\"\",\"amenities\":\"\",\"typologies\":\"\",\"price_from_uf\":\"1000\",\"local_rent_uf\":\"\",\"appreciation_percent\":\"\",\"image_urls\":[],\"description\":\"\"}')",
-      "Bash(git commit -m 'feat: add image upload to admin catalog mode *)"
+      "Bash(git commit -m 'feat: add image upload to admin catalog mode *)",
+      "Bash(git commit -m 'design: upgrade project cards to professional marketplace style *)"
     ]
   }
 }
