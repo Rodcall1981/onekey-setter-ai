@@ -73,7 +73,10 @@
       "Bash(pkill -9 -f \"src/backend/server\")",
       "Bash(curl -s \"http://localhost:3001/api/my-sessions/test\")",
       "Bash(git commit -m 'fix: remove non-existent updated_at column from sessions query *)",
-      "Bash(git commit -m 'chore: remove debug console.log statements *)"
+      "Bash(git commit -m 'chore: remove debug console.log statements *)",
+      "Bash(curl -s -X POST http://localhost:3001/api/analyze -H 'Content-Type: application/json' -d '{\"text\":\"test\"}')",
+      "Bash(curl -s \"http://localhost:3001/api/summary/8506ceb7-e29f-44b7-8abd-e6bccf1c29aa\")",
+      "Bash(git commit -m 'fix: make summary endpoint more flexible for partial data *)"
     ]
   }
 }

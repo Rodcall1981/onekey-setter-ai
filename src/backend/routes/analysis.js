@@ -523,13 +523,6 @@ router.get('/summary/:sessionId', async (req, res) => {
       });
     }
 
-    if (!discovery) {
-      return res.status(404).json({
-        error: 'No discovery data found',
-        details: 'Session ID not found in discovery_responses'
-      });
-    }
-
     // Get profile + capacity data
     const { data: profileArray, error: profError } = await supabase
       .from('profile_semaforo')
@@ -546,17 +539,10 @@ router.get('/summary/:sessionId', async (req, res) => {
       });
     }
 
-    if (!profile) {
-      return res.status(404).json({
-        error: 'No profile data found',
-        details: 'Session ID not found in profile_semaforo'
-      });
-    }
-
-    // Build summary object
-    const summary = {
+    // Build summary object from available data (even if partial)
+    const summary = discovery ? {
       intention: discovery.p_intention || 'N/A',
-      profile: profile.profile_detected,
+      profile: profile?.profile_detected || 'Pendiente',
       age: discovery.p1_age,
       jobType: discovery.p1_job_type,
       jobDescription: discovery.p1_job_description,
@@ -574,15 +560,23 @@ router.get('/summary/:sessionId', async (req, res) => {
       hasHiddenDecision: discovery.p7_has_hidden_decisor,
       readiness: discovery.p8_readiness_slider,
       friction: discovery.p8_friction_tags,
-      maxLoan: profile.max_loan_amount_clp,
-      affordablePropertyUF: profile.affordable_property_uf,
-      estimatedDividend: profile.estimated_dividend_clp,
-      loanTermYears: profile.loan_term_years
-    };
+      maxLoan: profile?.max_loan_amount_clp || null,
+      affordablePropertyUF: profile?.affordable_property_uf || null,
+      estimatedDividend: profile?.estimated_dividend_clp || null,
+      loanTermYears: profile?.loan_term_years || null
+    } : null;
+
+    // If no data at all, return empty but valid response
+    if (!discovery && !profile) {
+      return res.json({
+        success: true,
+        summary: {}
+      });
+    }
 
     res.json({
       success: true,
-      summary
+      summary: summary || {}
     });
 
   } catch (error) {
