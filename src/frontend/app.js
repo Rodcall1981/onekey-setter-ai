@@ -15,6 +15,15 @@ Perfecto. La dinámica es simple: te voy a hacer unas preguntas, algunas persona
 // ESTACIÓN 2: DISCOVERY - 8 preguntas críticas del blueprint
 const DISCOVERY_QUESTIONS = [
   {
+    id: 0,
+    question: '¿Esta propiedad es para vivienda propia, segunda vivienda, o inversión?',
+    field: 'p_intention',
+    inputs: {
+      intention: { type: 'tags', label: 'Intención', options: ['Vivienda propia', 'Segunda vivienda', 'Inversión'], multiSelect: false }
+    },
+    help: 'Define el perfil base: Vivienda Propia vs. Inversión (Primera/Inversionista/Experto según otros datos).'
+  },
+  {
     id: 1,
     question: 'Cuéntame, ¿en qué trabajas, hace cuánto y qué edad tienes?',
     field: 'p1',
@@ -300,6 +309,7 @@ function Dashboard() {
 
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
+    p_intention: { intention: [], notes: '' },
     p1: { age: '', job_description: '', job_type: [], tenure: [], notes: '' },
     p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
     p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
@@ -312,12 +322,10 @@ function Dashboard() {
   const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
   const [focusedNoteField, setFocusedNoteField] = useState(null); // Para focus automático en "Otra"
 
-  // ESTACIÓN 3: Profile + Semáforo
+  // ESTACIÓN 3: Profile + Capacity
   const [profileSemaforo, setProfileSemaforo] = useState(null);
   const [profileConfirmed, setProfileConfirmed] = useState(false);
-  const [semáforoConfirmed, setSemáforoConfirmed] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
-  const [selectedSemaforo, setSelectedSemaforo] = useState(null);
 
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
@@ -397,7 +405,8 @@ function Dashboard() {
   };
 
   // ESTACIÓN 3: Helper functions para detectar perfil y semáforo
-  // ESTACIÓN 3: Calcular capacidad de compra basada en edad y renta
+  // ESTACIÓN 3: Calcular capacidad de compra basada ÚNICAMENTE en edad y renta
+  // NO depende del pie - cliente puede financiar pie en construcción
   const calculateBuyingCapacity = async (sessionId) => {
     // Leer discovery_responses
     const discoveryResp = await fetch(`/api/discovery/${sessionId}`);
@@ -422,10 +431,10 @@ function Dashboard() {
     const loanToValuePercent = parseFloat(config.LOAN_TO_VALUE_PERCENT || 80);
     const ufValueClp = parseFloat(config.UF_VALUE_CLP || 40771);
 
-    // 1. Calcular dividendo máximo mensual
+    // 1. Calcular dividendo máximo mensual (solo de renta, sin considerar pie)
     const dividendMaxClp = (monthlyIncomeClp * incomeToDividendRatio) / 100;
 
-    // 2. Determinar plazo según edad
+    // 2. Determinar plazo según edad (ÚNICO factor para plazo)
     let loanTermYears = 0;
     let ageCategory = '';
     if (clientAge <= 45) {
@@ -450,6 +459,7 @@ function Dashboard() {
 
     // 3. Fórmula de anualidad: PV = PMT × [1 - (1+i)^-n] / i
     // PMT = dividendo máximo, i = tasa mensual, n = plazo en meses
+    // El pie NO entra en este cálculo - es capacidad de financiamiento, no de compra
     let maxLoanAmountClp = 0;
     if (loanTermYears > 0) {
       const monthlyRate = (annualRatePercent / 100) / 12;
@@ -460,6 +470,7 @@ function Dashboard() {
     }
 
     // 4. Valor de la propiedad = crédito / (LTV%)
+    // Si el cliente tiene pie, lo suma a esta compra; si no, financia el 100% (en blanco)
     const propertyValueClp = loanToValuePercent > 0 ? maxLoanAmountClp / (loanToValuePercent / 100) : 0;
     const affordablePropertyUf = propertyValueClp / ufValueClp;
 
@@ -633,6 +644,8 @@ function Dashboard() {
   const isDiscoveryQuestionComplete = (field) => {
     const answer = discoveryAnswers[field];
     switch (field) {
+      case 'p_intention':
+        return answer.intention.length > 0;
       case 'p1':
         return answer.age !== '' && (answer.job_type.length > 0 || answer.tenure.length > 0 || answer.job_description.trim() !== '');
       case 'p2':
@@ -655,9 +668,9 @@ function Dashboard() {
     }
   };
 
-  // Contar preguntas completadas
-  const discoveryCompletedCount = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
-  const allDiscoveryComplete = discoveryCompletedCount === 8;
+  // Contar preguntas completadas (9 total: p_intention + p1-p8)
+  const discoveryCompletedCount = ['p_intention', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
+  const allDiscoveryComplete = discoveryCompletedCount === 9;
 
   // ESTACIÓN 3: Guardar Profile + Semáforo y avanzar
   const saveProfileSemaforoAndProceed = async () => {
@@ -742,7 +755,7 @@ function Dashboard() {
   // ESTACIÓN 2: Guardar Discovery
   const saveDiscoveryAndProceed = async () => {
     if (!allDiscoveryComplete) {
-      setError('Por favor completa todas las 8 preguntas antes de continuar');
+      setError('Por favor completa todas las 9 preguntas antes de continuar');
       return;
     }
 
@@ -768,6 +781,7 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
+          p_intention: discoveryAnswers.p_intention.intention[0] || null,
           p1_age: discoveryAnswers.p1.age ? parseInt(discoveryAnswers.p1.age) : null,
           p1_job_description: discoveryAnswers.p1.job_description,
           p1_job_type: discoveryAnswers.p1.job_type[0] || null,
