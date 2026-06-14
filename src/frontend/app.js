@@ -358,6 +358,20 @@ function Dashboard() {
   const [gaps, setGaps] = useState([]);
   const [validating, setValidating] = useState(false);
 
+  // Load summary when entering Station 4
+  React.useEffect(() => {
+    if (step === 'station_4_summary' && !summary && sessionId) {
+      fetch(`/api/summary/${sessionId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.summary) {
+            setSummary(data.summary);
+          }
+        })
+        .catch(err => console.error('Summary fetch error:', err));
+    }
+  }, [step, sessionId, summary]);
+
   // ESTACIÓN 1: Guardar sesión y registrar evento
   const saveSessionAndProceed = async () => {
     if (!advisorName.trim() || !clientName.trim() || !consentGiven) {
@@ -1585,20 +1599,6 @@ function Dashboard() {
       e(Footer)
     );
   }
-
-  // ESTACIÓN 4: Cargar resumen cuando se entra a Station 4
-  React.useEffect(() => {
-    if (step === 'station_4_summary' && !summary && sessionId) {
-      fetch(`/api/summary/${sessionId}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.success && data.summary) {
-            setSummary(data.summary);
-          }
-        })
-        .catch(err => console.error('Summary fetch error:', err));
-    }
-  }, [step, sessionId]);
 
   // ESTACIÓN 4: RESUMEN (Panel)
   if (step === 'station_4_summary') {
