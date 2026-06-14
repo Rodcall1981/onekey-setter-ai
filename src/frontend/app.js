@@ -935,6 +935,42 @@ function Dashboard() {
     }
   };
 
+  // ADMIN: Cargar imágenes
+  const uploadAdminImages = async (files) => {
+    if (!files || files.length === 0) return [];
+
+    const uploadedUrls = [];
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('sessionId', 'admin-catalog');
+
+        const uploadResp = await fetch('/api/upload-project-image', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadResp.ok) {
+          const errorData = await uploadResp.json();
+          throw new Error(`Error uploading ${file.name}: ${errorData.details || errorData.message}`);
+        }
+
+        const uploadData = await uploadResp.json();
+        if (uploadData.success && uploadData.url) {
+          uploadedUrls.push(uploadData.url);
+        }
+      }
+    } catch (err) {
+      setError('Error al subir imágenes: ' + err.message);
+      console.error('Image upload error:', err);
+    }
+
+    return uploadedUrls;
+  };
+
   // ADMIN: Borrar proyecto del catálogo
   const handleAdminDeleteProject = async (projectId) => {
     if (!window.confirm('¿Eliminar este proyecto del catálogo?')) return;
@@ -1669,6 +1705,51 @@ function Dashboard() {
                 onChange: (evt) => setAdminNewProject({ ...adminNewProject, typologies: evt.target.value }),
                 style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
               }),
+
+              e('textarea', {
+                placeholder: 'Descripción',
+                value: adminNewProject.description,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, description: evt.target.value }),
+                style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+              }),
+
+              e('div', { style: { marginBottom: '12px' } },
+                e('label', { style: { display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600' } }, '📸 Imágenes del Proyecto'),
+                e('input', {
+                  type: 'file',
+                  multiple: true,
+                  accept: 'image/*',
+                  onChange: async (evt) => {
+                    const files = Array.from(evt.target.files || []);
+                    if (files.length > 0) {
+                      setAdminUploadingImages(true);
+                      const urls = await uploadAdminImages(files);
+                      setAdminNewProject({ ...adminNewProject, image_urls: [...adminNewProject.image_urls, ...urls] });
+                      setAdminUploadingImages(false);
+                      evt.target.value = '';
+                    }
+                  },
+                  style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box', cursor: 'pointer' }
+                })
+              ),
+
+              adminNewProject.image_urls.length > 0 && e('div', { style: { marginBottom: '12px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' } },
+                ...adminNewProject.image_urls.map((url, idx) =>
+                  e('div', { style: { position: 'relative', overflow: 'hidden', borderRadius: '4px' } },
+                    e('img', {
+                      src: url,
+                      style: { width: '100%', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #ddd' }
+                    }),
+                    e('button', {
+                      onClick: () => setAdminNewProject({
+                        ...adminNewProject,
+                        image_urls: adminNewProject.image_urls.filter((_, i) => i !== idx)
+                      }),
+                      style: { position: 'absolute', top: '2px', right: '2px', background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
+                    }, '✕')
+                  )
+                )
+              ),
 
               e('button', {
                 onClick: handleAdminSaveProject,

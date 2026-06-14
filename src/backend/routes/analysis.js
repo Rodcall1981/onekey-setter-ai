@@ -1067,8 +1067,14 @@ router.post('/closing', async (req, res) => {
 // Middleware para validar ADMIN_SECRET
 const validateAdminSecret = (req, res, next) => {
   const adminSecret = req.headers['x-admin-secret'];
+  const envSecret = process.env.ADMIN_SECRET;
 
-  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+  console.log('Admin Secret Validation:');
+  console.log('  Header received:', adminSecret ? '✓' : '✗');
+  console.log('  Env secret exists:', envSecret ? '✓' : '✗');
+  console.log('  Match:', adminSecret === envSecret ? '✓' : '✗');
+
+  if (!adminSecret || adminSecret !== envSecret) {
     return res.status(401).json({
       error: 'Unauthorized',
       message: 'Invalid or missing admin secret'
