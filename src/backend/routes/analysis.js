@@ -594,7 +594,7 @@ router.post('/projects', async (req, res) => {
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     const {
@@ -677,7 +677,7 @@ router.get('/projects/:sessionId', async (req, res) => {
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     const { data, error } = await supabase
@@ -724,7 +724,7 @@ router.post('/upload-project-image', upload.single('file'), async (req, res) => 
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     const sessionId = req.body.sessionId || 'temp';
