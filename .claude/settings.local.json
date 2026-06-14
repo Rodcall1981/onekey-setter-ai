@@ -34,7 +34,8 @@
       "Bash(chmod +x /tmp/final_test.sh)",
       "Bash(/tmp/final_test.sh)",
       "Bash(git commit -m 'fix: correct p_intention field naming from p_intention to p0 *)",
-      "Bash(git commit -m 'fix: remove setSelectedSemaforo reference \\(already deleted state\\) *)"
+      "Bash(git commit -m 'fix: remove setSelectedSemaforo reference \\(already deleted state\\) *)",
+      "Bash(git commit -m 'feat: Station 3 complete with buying capacity calculator *)"
     ]
   }
 }
