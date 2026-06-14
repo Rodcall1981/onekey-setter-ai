@@ -1661,6 +1661,116 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 4: PARTE C - Vista de Proyectos
+  if (step === 'station_4_projects_view') {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '1100px', margin: '0 auto', padding: '32px', width: '100%' } },
+        // Banner
+        e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📋 ESTACIÓN 4 PARTE C: PRESENTACIÓN DE PROYECTOS')
+        ),
+
+        // Tabs de proyectos
+        projects && projects.length > 0 ? e('div', null,
+          // Tab headers
+          e('div', { style: { display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '2px solid #ddd', paddingBottom: '0' } },
+            ...projects.map((proj, idx) =>
+              e('button', {
+                onClick: () => setCurrentProject(proj),
+                style: {
+                  padding: '12px 20px',
+                  background: currentProject.project_number === proj.project_number ? '#1b5e20' : '#fff',
+                  color: currentProject.project_number === proj.project_number ? '#fff' : '#000',
+                  border: '1px solid #ddd',
+                  borderBottom: 'none',
+                  borderRadius: '6px 6px 0 0',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }
+              }, 'Proyecto ' + (idx + 1))
+            )
+          ),
+
+          // Tab content - Selected project card
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } },
+            // Título
+            e('h2', { style: { margin: '0 0 20px', color: '#000', fontSize: '18px', fontWeight: '600' } }, 'Proyecto ' + currentProject.project_number),
+
+            // Grid 2 columnas
+            e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' } },
+              // Columna izquierda - Datos principales
+              e('div', null,
+                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '📍 Ubicación'),
+                e('div', { style: { fontSize: '14px', lineHeight: '1.6', color: '#333' } },
+                  e('p', { style: { margin: '0 0 4px' } }, '🏠 Estado: ' + (currentProject.project_state || 'N/A')),
+                  e('p', { style: { margin: '0 0 4px' } }, '🏘️ Comuna: ' + (currentProject.comuna || 'N/A')),
+                  e('p', { style: { margin: '0 0 8px' } }, '🛣️ Dirección: ' + (currentProject.address || 'N/A')),
+                  currentProject.gmaps_link && e('a', { href: currentProject.gmaps_link, target: '_blank', style: { color: '#1b5e20', textDecoration: 'none', fontWeight: '500' } }, '→ Ver en Google Maps')
+                ),
+
+                e('hr', { style: { border: 'none', borderTop: '1px solid #eee', margin: '16px 0' } }),
+
+                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '💰 Valores'),
+                e('div', { style: { fontSize: '14px', lineHeight: '1.6', color: '#333' } },
+                  e('p', { style: { margin: '0 0 4px' } }, '💵 Desde: UF ' + (currentProject.price_from_uf || 'N/A')),
+                  currentProject.local_rent_uf && e('p', { style: { margin: '0 0 4px' } }, '🏪 Arriendo local: UF ' + currentProject.local_rent_uf),
+                  currentProject.appreciation_percent && e('p', { style: { margin: '0' } }, '📈 Apreciación: ' + currentProject.appreciation_percent + '%')
+                )
+              ),
+
+              // Columna derecha - Detalles
+              e('div', null,
+                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '🏗️ Detalles'),
+                e('div', { style: { fontSize: '14px', lineHeight: '1.8', color: '#333' } },
+                  e('p', { style: { margin: '0 0 8px' } }, '📐 Tipologías:'),
+                  e('p', { style: { margin: '0 0 12px', color: '#666', fontSize: '13px' } }, currentProject.typologies || 'No especificadas'),
+
+                  currentProject.amenities && (
+                    e('p', { style: { margin: '0 0 8px' } }, '✨ Amenities:'),
+                    e('p', { style: { margin: '0 0 12px', color: '#666', fontSize: '13px' } }, currentProject.amenities)
+                  )
+                )
+              )
+            ),
+
+            // Imágenes si existen
+            currentProject.image_urls && currentProject.image_urls.length > 0 && (
+              e('div', null,
+                e('hr', { style: { border: 'none', borderTop: '1px solid #eee', margin: '20px 0' } }),
+                e('h3', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '📸 Galería'),
+                e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' } },
+                  ...currentProject.image_urls.map(url =>
+                    e('img', { src: url, style: { width: '100%', height: '200px', objectFit: 'cover', borderRadius: '6px' } })
+                  )
+                )
+              )
+            )
+          )
+        ) : (
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '32px', textAlign: 'center', color: '#999' } },
+            e('p', null, 'No hay proyectos cargados')
+          )
+        ),
+
+        // Botones de acción
+        e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center' } },
+          e('button', {
+            onClick: () => setStep('station_4_projects_form'),
+            style: { padding: '12px 24px', background: '#fff', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+          }, '← Agregar más proyectos'),
+          e('button', {
+            onClick: () => { /* TODO: Cierre y siguiente flujo */ setStep('apertura'); },
+            style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+          }, 'Finalizar presentación →')
+        )
+      ),
+      e(Footer)
+    );
+  }
+
   // ESTACIÓN 4: RESUMEN (Panel)
   if (step === 'station_4_summary') {
     if (!summary) {
