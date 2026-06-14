@@ -104,7 +104,8 @@
       "Bash(curl -s https://onekey-setter-ai-production.up.railway.app/health)",
       "Bash(curl -s https://onekey-setter-ai-production.up.railway.app/api/admin/catalog)",
       "Bash(git commit -m 'ui: simplify Station 4 action button labels *)",
-      "Bash(git commit -m 'feat: add image gallery modal with navigation *)"
+      "Bash(git commit -m 'feat: add image gallery modal with navigation *)",
+      "Bash(git commit -m 'ui: add back button to Station 5 objeciones *)"
     ]
   }
 }
