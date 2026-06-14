@@ -252,7 +252,7 @@ function Dashboard() {
       const newSessionId = sessionData.id;
       setSessionId(newSessionId);
 
-      // 2. Registrar evento 'station_started' para Estación 2 en session_events
+      // 2. Registrar evento 'station_started' para Estación 1 en session_events
       await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -260,7 +260,7 @@ function Dashboard() {
           session_id: newSessionId,
           advisor_name: advisorName,
           event_type: 'station_started',
-          station_number: 2
+          station_number: 1
         })
       });
 
