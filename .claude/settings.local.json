@@ -9,7 +9,9 @@
       "Bash(git commit -m 'fix: correct sessions table column mapping \\(setter_id, client_name only\\) *)",
       "Bash(git commit -m 'debug: add detailed logging for Supabase client initialization and session insert *)",
       "Bash(git commit -m 'feat: Station 1 \\(Apertura\\) fully functional and tested *)",
-      "Bash(git commit -m 'feat: add notes field, '\\\\''Otra'\\\\'' tag, and auto-focus for Station 2 \\(Discovery\\) *)"
+      "Bash(git commit -m 'feat: add notes field, '\\\\''Otra'\\\\'' tag, and auto-focus for Station 2 \\(Discovery\\) *)",
+      "Bash(node --check /Users/a123/Documents/Workspace/onekey-setter-ai/src/frontend/app.js)",
+      "Bash(git commit -m 'fix: syntax error in Discovery notes field rendering *)"
     ]
   }
 }

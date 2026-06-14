@@ -1007,10 +1007,9 @@ function Dashboard() {
                           style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', resize: 'none', background: focusedNoteField === field ? '#fffbf0' : '#fff', transition: 'all 0.2s' }
                         })
                       )
-                    ];
-                  })()
-                  .flat()
-
+                    ]
+                  );
+                })()
               )
             )
           ),
