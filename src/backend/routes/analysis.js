@@ -730,7 +730,18 @@ router.post('/upload-project-image', upload.single('file'), async (req, res) => 
     const sessionId = req.body.sessionId || 'temp';
     const timestamp = Date.now();
     const randomStr = Math.random().toString(36).substring(2, 8);
-    const filename = `${sessionId}_${timestamp}_${randomStr}_${req.file.originalname}`;
+    // Sanitizar nombre del archivo: remover caracteres especiales
+    const sanitizedName = req.file.originalname
+      .toLowerCase()
+      .replace(/[áàâä]/g, 'a')
+      .replace(/[éèêë]/g, 'e')
+      .replace(/[íìîï]/g, 'i')
+      .replace(/[óòôö]/g, 'o')
+      .replace(/[úùûü]/g, 'u')
+      .replace(/[ñ]/g, 'n')
+      .replace(/[^a-z0-9.-]/g, '_')
+      .replace(/_+/g, '_');
+    const filename = `${sessionId}_${timestamp}_${randomStr}_${sanitizedName}`;
 
     const { data, error } = await supabase
       .storage

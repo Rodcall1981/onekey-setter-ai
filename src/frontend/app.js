@@ -426,6 +426,13 @@ function Dashboard() {
     }
   }, [step, sessionId]);
 
+  // Load admin catalog when entering admin mode
+  React.useEffect(() => {
+    if (adminMode && adminSecret && adminCatalog.length === 0) {
+      loadAdminCatalog();
+    }
+  }, [adminMode, adminSecret]);
+
   // ESTACIÓN 1: Guardar sesión y registrar evento
   const saveSessionAndProceed = async () => {
     if (!advisorName.trim() || !clientName.trim() || !consentGiven) {
