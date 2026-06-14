@@ -708,8 +708,9 @@ function Dashboard() {
         body: JSON.stringify({
           session_id: sessionId,
           profile_detected: selectedProfile,
-          profile_corrected_by_advisor: selectedProfile !== profileSemaforo.profileDetected ? selectedProfile : null,
-          traffic_light: null, // Ya no se usa; capacidad reemplaza al semáforo
+          profile_corrected_by_advisor: selectedProfile !== profileSemaforo.profileDetected ? selectedProfile : false,
+          traffic_light: 'N/A', // Ya no se usa; capacidad reemplaza al semáforo
+          semaforo_rationale: 'Reemplazado por capacidad de compra',
           loan_term_years: capacity.loanTermYears,
           max_loan_amount_clp: capacity.maxLoanAmountClp,
           affordable_property_uf: capacity.affordablePropertyUf,
