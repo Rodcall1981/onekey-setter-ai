@@ -1,21 +1,16 @@
 const { useState } = React;
 const e = React.createElement;
 
-const INTRO_SCRIPT = `Hola {clientName}, soy {advisorName}, asesor patrimonial en OneKey.
+// ESTACIÓN 1: APERTURA - Guión literal del blueprint (chileno)
+const APERTURA_SCRIPT = `Hola {clientName}, soy {advisorName}, asesor patrimonial en OneKey. Gracias por tu tiempo.
 
-Esta reunión es el primer paso para lograr tu objetivo de inversión, crecimiento patrimonial o compra de una propiedad.
+Esta reunión es el primer paso para lograr tu objetivo, sea inversión, crecimiento patrimonial o compra de una propiedad. Te voy a ser honesto desde ya: vamos a hacer algo distinto a lo que quizás esperas. Yo NO te voy a mostrar departamentos todavía.
 
-En esta reunión tendremos una primera conversación, donde setearemos tus expectativas, donde además espero conocerte mejor y ver qué tan preparado estás para este paso.
+Primero necesito entender bien tu situación, porque no estás comprando un par de zapatillas — esta es de las decisiones financieras más importantes de tu vida. Y mi análisis solo sirve si es sobre tu caso real, no sobre un folleto genérico.
 
-Porque como decimos acá, no estás comprando un par de zapatillas, es de las inversiones más importantes de la vida.
+Una cosa antes de partir: voy a tomar notas de la reunión para mandarte un resumen completo después. ¿Te parece bien?
 
-Así que te voy a dar un par de indicaciones antes de comenzar, ¿estás de acuerdo?
-
-Este es un programa integral de inversión inmobiliaria, analizaremos tu perfil de inversión, que va desde conservador a arriesgado.
-
-Además, necesito que tus respuestas sean lo más real para poder determinar qué nivel de conocimiento tienes del mercado inmobiliario.
-
-También debes entender que acá mi compromiso es contigo y con tu futuro. Esta es nuestra primera reunión, veremos si calificas para continuar con el programa OneKey.`;
+Perfecto. La dinámica es simple: te voy a hacer unas preguntas, algunas personales sobre tu situación financiera. Necesito que seas lo más real posible — sin eso no puedo armarte nada serio. Al final, si lo que vemos te hace sentido, vas a poder dejar tu mejor opción asegurada. ¿De acuerdo? Partamos.`;
 
 const QUESTIONS = [
   {
@@ -172,16 +167,22 @@ const QUESTIONS = [
 
 const Header = ({ step, advisorName, clientName, completedCount }) => {
   const showProgress = step === 'questions';
+  const getStepLabel = () => {
+    if (step === 'apertura') return 'Estación 1: Apertura';
+    if (step === 'questions') return 'Estación 2: Discovery';
+    return 'OneKey Setter';
+  };
+
   return e('div', { style: { background: '#383838', color: '#fff', padding: '16px 32px', borderBottom: '1px solid #4d5c61', position: 'sticky', top: 0, zIndex: 100 } },
     e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
       e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
         e('span', { style: { fontSize: '18px', fontWeight: '300', letterSpacing: '-0.5px' } }, 'onekey'),
-        e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, 'Paso 1: Sistema Arquitectura Patrimonial')
+        e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, getStepLabel())
       ),
       showProgress && e('div', { style: { textAlign: 'right' } },
-        e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/15' : 'Progreso'),
+        e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/8' : 'Progreso'),
         e('div', { style: { width: '120px', background: '#515266', height: '3px', borderRadius: '2px', overflow: 'hidden' } },
-          e('div', { style: { background: '#d1dfdf', height: '100%', width: (completedCount / 15 * 100) + '%', transition: 'width 0.3s' } })
+          e('div', { style: { background: '#d1dfdf', height: '100%', width: (completedCount / 8 * 100) + '%', transition: 'width 0.3s' } })
         )
       )
     )
@@ -207,6 +208,9 @@ function Dashboard() {
   const [step, setStep] = useState('setup');
   const [advisorName, setAdvisorName] = useState('');
   const [clientName, setClientName] = useState('');
+  const [sessionId, setSessionId] = useState(null);
+  const [reunionMode, setReunionMode] = useState('2_reuniones'); // ESTACIÓN 1: modo configurable
+  const [consentGiven, setConsentGiven] = useState(false); // ESTACIÓN 1: consentimiento obligatorio
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
   const [analysis, setAnalysis] = useState(null);
@@ -215,6 +219,59 @@ function Dashboard() {
   const [meetNotes, setMeetNotes] = useState('');
   const [gaps, setGaps] = useState([]);
   const [validating, setValidating] = useState(false);
+
+  // ESTACIÓN 1: Guardar sesión y registrar evento
+  const saveSessionAndProceed = async () => {
+    if (!advisorName.trim() || !clientName.trim() || !consentGiven) {
+      setError('Por favor completa todos los campos y confirma el consentimiento');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // 1. Guardar sesión en Supabase
+      const sessionResponse = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advisor_name: advisorName,
+          client_name: clientName,
+          reunion_mode: reunionMode,
+          current_station: 2, // Estación 1 terminada, próxima es Discovery
+          status: 'apertura'
+        })
+      });
+
+      if (!sessionResponse.ok) {
+        throw new Error('Error al crear sesión');
+      }
+
+      const sessionData = await sessionResponse.json();
+      const newSessionId = sessionData.id;
+      setSessionId(newSessionId);
+
+      // 2. Registrar evento 'station_started' para Estación 2 en session_events
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: newSessionId,
+          advisor_name: advisorName,
+          event_type: 'station_started',
+          station_number: 2
+        })
+      });
+
+      // Avanzar a Estación 2 (Discovery)
+      setStep('questions');
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleQuestionComplete = (id) => {
     setQuestions(questions.map(q => q.id === id ? {...q, completed: !q.completed} : q));
@@ -404,7 +461,7 @@ function Dashboard() {
         e('div', { style: { marginBottom: '32px' } },
           e('div', { style: { fontSize: '28px', fontWeight: '300', color: '#383838', marginBottom: '16px', letterSpacing: '-0.5px' } }, 'onekey'),
           e('h1', { style: { margin: '0 0 8px', fontSize: '28px', fontWeight: '700', color: '#000' } }, 'OneKey Setter'),
-          e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Diagnóstico Inicial')
+          e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Estación 1: Apertura')
         ),
         e('div', { style: { marginBottom: '20px' } },
           e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, 'Nombre del Asesor'),
@@ -425,7 +482,7 @@ function Dashboard() {
           })
         ),
         e('button', {
-          onClick: () => setStep('intro'),
+          onClick: () => setStep('apertura'),
           disabled: !advisorName.trim() || !clientName.trim(),
           style: { width: '100%', padding: '14px', background: (advisorName.trim() && clientName.trim()) ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: (advisorName.trim() && clientName.trim()) ? 'pointer' : 'not-allowed' }
         }, 'Iniciar Sesión')
@@ -433,25 +490,85 @@ function Dashboard() {
     );
   }
 
-  // Intro Screen
-  if (step === 'intro') {
-    const script = INTRO_SCRIPT.replace('{clientName}', clientName).replace('{advisorName}', advisorName);
+  // ESTACIÓN 1: APERTURA
+  if (step === 'apertura') {
+    const script = APERTURA_SCRIPT.replace('{clientName}', clientName).replace('{advisorName}', advisorName);
+    const canProceed = consentGiven && advisorName.trim() && clientName.trim();
+
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step, advisorName, clientName, completedCount }),
+      e(Header, { step: 'apertura', advisorName, clientName, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '48px 32px', width: '100%' } },
+        // Banner de estado
+        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 1: APERTURA')
+        ),
+
+        // Guión
         e('div', { style: { background: '#fff', borderRadius: '8px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px' } },
           e('p', { style: { fontSize: '16px', lineHeight: '1.8', color: '#333', whiteSpace: 'pre-wrap', margin: '0' } }, script)
         ),
-        e('div', { style: { display: 'flex', gap: '12px' } },
-          e('button', {
-            onClick: () => setStep('setup'),
-            style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }
-          }, 'Volver'),
-          e('button', {
-            onClick: () => setStep('questions'),
-            style: { flex: 1, padding: '14px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600' }
-          }, 'Comenzar Preguntas')
+
+        // Selector de modo reunión
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+          e('p', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '600', color: '#333' } }, 'Modo de la reunión'),
+          e('div', { style: { display: 'flex', gap: '12px' } },
+            e('label', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '12px', border: reunionMode === '2_reuniones' ? '2px solid #000' : '1px solid #ddd', borderRadius: '6px', background: reunionMode === '2_reuniones' ? '#f5f5f5' : '#fff' } },
+              e('input', {
+                type: 'radio',
+                name: 'reunion_mode',
+                value: '2_reuniones',
+                checked: reunionMode === '2_reuniones',
+                onChange: () => setReunionMode('2_reuniones'),
+                style: { cursor: 'pointer' }
+              }),
+              e('span', { style: { fontSize: '13px', fontWeight: '500', color: '#000' } }, '2 reuniones (Discovery separado)')
+            ),
+            e('label', { style: { flex: 1, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '12px', border: reunionMode === '1_reunion' ? '2px solid #000' : '1px solid #ddd', borderRadius: '6px', background: reunionMode === '1_reunion' ? '#f5f5f5' : '#fff' } },
+              e('input', {
+                type: 'radio',
+                name: 'reunion_mode',
+                value: '1_reunion',
+                checked: reunionMode === '1_reunion',
+                onChange: () => setReunionMode('1_reunion'),
+                style: { cursor: 'pointer' }
+              }),
+              e('span', { style: { fontSize: '13px', fontWeight: '500', color: '#000' } }, '1 reunión (todo seguido)')
+            )
+          )
+        ),
+
+        // Checkbox de consentimiento
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px', borderLeft: '3px solid #1b5e20' } },
+          e('label', { style: { display: 'flex', alignItems: 'flex-start', gap: '12px', cursor: 'pointer' } },
+            e('input', {
+              type: 'checkbox',
+              checked: consentGiven,
+              onChange: (evt) => setConsentGiven(evt.target.checked),
+              style: { width: '20px', height: '20px', cursor: 'pointer', marginTop: '2px', flexShrink: 0 }
+            }),
+            e('div', null,
+              e('p', { style: { margin: '0 0 4px', fontSize: '13px', fontWeight: '600', color: '#000' } }, '✓ Cliente dio consentimiento de notas'),
+              e('p', { style: { margin: '0', fontSize: '12px', color: '#666' } }, 'Confirma que el cliente autorizó tomar notas de la reunión para el resumen posterior.')
+            )
+          )
+        ),
+
+        // Error si existe
+        error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginBottom: '24px', borderLeft: '3px solid #ef5350' } },
+          e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, '❌ ' + error)
         )
+      ),
+
+      e('div', { style: { maxWidth: '1200px', margin: '0 auto', padding: '0 32px 32px', display: 'flex', gap: '12px', width: '100%' } },
+        e('button', {
+          onClick: () => setStep('setup'),
+          style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+        }, 'Volver'),
+        e('button', {
+          onClick: saveSessionAndProceed,
+          disabled: !canProceed || loading,
+          style: { flex: 1, padding: '14px', background: canProceed && !loading ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: canProceed && !loading ? 'pointer' : 'not-allowed' }
+        }, loading ? 'Iniciando...' : '✓ Consentimiento dado → Continuar a Discovery')
       ),
       e(Footer)
     );

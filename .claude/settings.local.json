@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(env)",
+      "Bash(cat ~/.config/last30days/.env 2>/dev/null | grep -i supabase || echo \"No Supabase vars found\")",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: implement Station 1 \\(Apertura\\) with consent requirement and reunion mode selection *)"
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { analyzeConversation } = require('../services/claudeService');
-const { saveAnalysis } = require('../services/supabaseService');
+const { saveAnalysis, saveSession, registerEvent } = require('../services/supabaseService');
 const { validateCompleteness } = require('../services/geminiService');
 
 router.post('/analyze', async (req, res) => {
@@ -84,6 +84,90 @@ router.post('/validate', async (req, res) => {
 
   } catch (error) {
     console.error('Validate route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 1: Crear sesión
+router.post('/sessions', async (req, res) => {
+  try {
+    const { advisor_name, client_name, reunion_mode, current_station, status } = req.body;
+
+    if (!advisor_name || !client_name) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "advisor_name" y "client_name"'
+      });
+    }
+
+    const result = await saveSession({
+      advisor_name,
+      client_name,
+      reunion_mode: reunion_mode || '2_reuniones',
+      current_station: current_station || 1,
+      status: status || 'apertura'
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: 'Failed to create session',
+        details: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      id: result.data.id,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Sessions route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// Registrar evento de sesión
+router.post('/events', async (req, res) => {
+  try {
+    const { session_id, advisor_name, event_type, station_number, metadata } = req.body;
+
+    if (!session_id || !advisor_name || !event_type) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "session_id", "advisor_name" y "event_type"'
+      });
+    }
+
+    const result = await registerEvent({
+      session_id,
+      advisor_name,
+      event_type,
+      station_number: station_number || null,
+      metadata: metadata || {}
+    });
+
+    if (!result.success) {
+      return res.status(500).json({
+        error: 'Failed to register event',
+        details: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      id: result.data.id,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Events route error:', error);
     res.status(500).json({
       error: 'Server error',
       message: error.message

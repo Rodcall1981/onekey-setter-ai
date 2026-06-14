@@ -48,4 +48,20 @@ const saveSession = async (sessionData) => {
   }
 };
 
-module.exports = { saveAnalysis, saveClientProfile, saveSession };
+// ESTACIÓN 1: Registrar evento de sesión
+const registerEvent = async (eventData) => {
+  try {
+    const { data, error } = await supabase
+      .from('session_events')
+      .insert([eventData])
+      .select();
+
+    if (error) throw error;
+    return { success: true, data: data[0] };
+  } catch (error) {
+    console.error('Supabase error:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports = { saveAnalysis, saveClientProfile, saveSession, registerEvent };
