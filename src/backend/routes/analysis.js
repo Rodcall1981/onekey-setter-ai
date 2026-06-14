@@ -864,6 +864,13 @@ router.post('/objections', async (req, res) => {
       }
 
       try {
+        if (!process.env.ANTHROPIC_API_KEY) {
+          return res.status(500).json({
+            error: 'Missing ANTHROPIC_API_KEY',
+            details: 'ANTHROPIC_API_KEY not configured in environment'
+          });
+        }
+
         const anthropic = new Anthropic({
           apiKey: process.env.ANTHROPIC_API_KEY
         });
@@ -892,11 +899,19 @@ Responde SOLO en JSON, así:
           ]
         });
 
-        const responseText = message.content[0].text;
+        let responseText = message.content[0].text;
+
+        // Extraer JSON del bloque markdown si viene envuelto (```json ... ```)
+        const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) ||
+                         responseText.match(/```\n?([\s\S]*?)\n?```/);
+        if (jsonMatch) {
+          responseText = jsonMatch[1];
+        }
+
         resolution_steps = JSON.parse(responseText);
         ai_generated = true;
       } catch (aiError) {
-        console.error('Claude Haiku error:', aiError);
+        console.error('Claude Haiku error:', aiError.message);
         return res.status(500).json({
           error: 'Failed to generate objection handling',
           details: aiError.message
