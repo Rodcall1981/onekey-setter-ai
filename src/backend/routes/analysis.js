@@ -616,4 +616,61 @@ router.get('/projects/:sessionId', async (req, res) => {
   }
 });
 
+// ESTACIÓN 4: Upload image to Storage
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.post('/upload-project-image', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        error: 'No file provided',
+        details: 'Requiere un archivo en el campo "file"'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const sessionId = req.body.sessionId || 'temp';
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const filename = `${sessionId}_${timestamp}_${randomStr}_${req.file.originalname}`;
+
+    const { data, error } = await supabase
+      .storage
+      .from('station4_project_images')
+      .upload(filename, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Upload error:', error);
+      return res.status(500).json({
+        error: 'Failed to upload image',
+        details: error.message
+      });
+    }
+
+    const publicUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/station4_project_images/${filename}`;
+
+    res.json({
+      success: true,
+      url: publicUrl,
+      filename: filename
+    });
+
+  } catch (error) {
+    console.error('Upload route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

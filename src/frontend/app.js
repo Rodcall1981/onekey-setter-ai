@@ -653,7 +653,7 @@ function Dashboard() {
     return '$80MM+';
   };
 
-  // ESTACIÓN 4: Upload images to Storage
+  // ESTACIÓN 4: Upload images via backend endpoint
   const uploadProjectImages = async (files) => {
     if (!files || files.length === 0) return [];
 
@@ -661,36 +661,26 @@ function Dashboard() {
     const uploadedUrls = [];
 
     try {
-      // Usar el cliente de Supabase del window
-      const { createClient } = window.supabase;
-      const supabaseUrl = 'https://elnjwiwhijblkadcoloh.supabase.co';
-      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmp3aXdoaWpibGthZGNvbG9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTkxNDU3MzgsImV4cCI6MjAzNDcyMTczOH0.TwzYQHCt5DhQPEqyxvQGagbvPvS4rTXArkqPEqCqaEE';
-
-      if (!createClient) {
-        throw new Error('Supabase SDK not loaded. Refresh the page.');
-      }
-
-      const supabaseClient = createClient(supabaseUrl, supabaseKey);
-
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 8);
-        const filename = `${sessionId}_${timestamp}_${randomStr}_${file.name}`;
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('sessionId', sessionId);
 
-        const { data, error } = await supabaseClient
-          .storage
-          .from('station4_project_images')
-          .upload(filename, file);
+        const uploadResp = await fetch('/api/upload-project-image', {
+          method: 'POST',
+          body: formData
+        });
 
-        if (error) {
-          console.error('Upload error:', error);
-          throw new Error(`Error uploading ${file.name}: ${error.message}`);
+        if (!uploadResp.ok) {
+          const errorData = await uploadResp.json();
+          throw new Error(`Error uploading ${file.name}: ${errorData.details || errorData.message}`);
         }
 
-        // Construir URL pública
-        const publicUrl = `${supabaseUrl}/storage/v1/object/public/station4_project_images/${filename}`;
-        uploadedUrls.push(publicUrl);
+        const uploadData = await uploadResp.json();
+        if (uploadData.success && uploadData.url) {
+          uploadedUrls.push(uploadData.url);
+        }
       }
     } catch (err) {
       setError('Error al subir imágenes: ' + err.message);
