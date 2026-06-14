@@ -55,7 +55,8 @@
       "Bash(chmod +x /tmp/test_complete_flow.sh)",
       "Bash(/tmp/test_complete_flow.sh)",
       "Bash(git commit -m 'fix: move useEffect outside of JSX to correct hook position *)",
-      "Bash(git commit -m 'fix: move useEffect to correct location \\(after all useState, before conditionals\\) *)"
+      "Bash(git commit -m 'fix: move useEffect to correct location \\(after all useState, before conditionals\\) *)",
+      "Bash(git commit -m 'fix: add Supabase SDK to frontend and fix image upload client initialization *)"
     ]
   }
 }

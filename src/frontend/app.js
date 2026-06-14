@@ -661,13 +661,13 @@ function Dashboard() {
     const uploadedUrls = [];
 
     try {
-      // Crear cliente de Supabase en el frontend
+      // Usar el cliente de Supabase del window
+      const { createClient } = window.supabase;
       const supabaseUrl = 'https://elnjwiwhijblkadcoloh.supabase.co';
       const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmp3aXdoaWpibGthZGNvbG9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTkxNDU3MzgsImV4cCI6MjAzNDcyMTczOH0.TwzYQHCt5DhQPEqyxvQGagbvPvS4rTXArkqPEqCqaEE';
-      const { createClient } = window.supabase || {};
 
       if (!createClient) {
-        throw new Error('Supabase client not available');
+        throw new Error('Supabase SDK not loaded. Refresh the page.');
       }
 
       const supabaseClient = createClient(supabaseUrl, supabaseKey);
