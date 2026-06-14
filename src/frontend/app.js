@@ -370,7 +370,7 @@ function Dashboard() {
         })
         .catch(err => console.error('Summary fetch error:', err));
     }
-  }, [step, sessionId, summary]);
+  }, [step, sessionId]);
 
   // ESTACIÓN 1: Guardar sesión y registrar evento
   const saveSessionAndProceed = async () => {
