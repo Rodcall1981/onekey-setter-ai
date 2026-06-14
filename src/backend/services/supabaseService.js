@@ -35,15 +35,20 @@ const saveClientProfile = async (profileData) => {
 
 const saveSession = async (sessionData) => {
   try {
+    console.log('saveSession - inserting data:', sessionData);
     const { data, error } = await supabase
       .from('sessions')
       .insert([sessionData])
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error.code, error.message, error.details);
+      throw error;
+    }
+    console.log('saveSession - success, returned data:', data);
     return { success: true, data: data[0] };
   } catch (error) {
-    console.error('Supabase error:', error.message);
+    console.error('Supabase error (catch):', error.message, error);
     return { success: false, error: error.message };
   }
 };

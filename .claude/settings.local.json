@@ -5,7 +5,8 @@
       "Bash(cat ~/.config/last30days/.env 2>/dev/null | grep -i supabase || echo \"No Supabase vars found\")",
       "Bash(git add *)",
       "Bash(git commit -m 'feat: implement Station 1 \\(Apertura\\) with consent requirement and reunion mode selection *)",
-      "Bash(git commit -m 'fix: correct station_number for Station 1 event from 2 to 1 *)"
+      "Bash(git commit -m 'fix: correct station_number for Station 1 event from 2 to 1 *)",
+      "Bash(git commit -m 'fix: correct sessions table column mapping \\(setter_id, client_name only\\) *)"
     ]
   }
 }

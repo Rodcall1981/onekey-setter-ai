@@ -231,21 +231,22 @@ function Dashboard() {
     setError(null);
 
     try {
-      // 1. Guardar sesión en Supabase
+      // 1. Guardar sesión en Supabase (solo campos obligatorios + reunion_mode)
       const sessionResponse = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          advisor_name: advisorName,
-          client_name: clientName,
-          reunion_mode: reunionMode,
-          current_station: 2, // Estación 1 terminada, próxima es Discovery
-          status: 'apertura'
+          setter_id: advisorName.trim(),
+          client_name: clientName.trim(),
+          reunion_mode: reunionMode
+          // NO mandar: advisor_name, created_at, started_at, current_station, status
+          // (todos tienen defaults en Supabase)
         })
       });
 
       if (!sessionResponse.ok) {
-        throw new Error('Error al crear sesión');
+        const errorData = await sessionResponse.json();
+        throw new Error(errorData.message || 'Error al crear sesión');
       }
 
       const sessionData = await sessionResponse.json();
@@ -258,7 +259,7 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: newSessionId,
-          advisor_name: advisorName,
+          advisor_name: advisorName.trim(),
           event_type: 'station_started',
           station_number: 1
         })
@@ -268,6 +269,7 @@ function Dashboard() {
       setStep('questions');
     } catch (err) {
       setError('Error: ' + err.message);
+      console.error('saveSessionAndProceed error:', err);
     } finally {
       setLoading(false);
     }

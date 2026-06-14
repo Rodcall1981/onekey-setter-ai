@@ -94,24 +94,29 @@ router.post('/validate', async (req, res) => {
 // ESTACIÓN 1: Crear sesión
 router.post('/sessions', async (req, res) => {
   try {
-    const { advisor_name, client_name, reunion_mode, current_station, status } = req.body;
+    const { setter_id, client_name, reunion_mode } = req.body;
 
-    if (!advisor_name || !client_name) {
+    if (!setter_id || !client_name) {
       return res.status(400).json({
         error: 'Missing parameters',
-        message: 'Requiere "advisor_name" y "client_name"'
+        message: 'Requiere "setter_id" y "client_name"'
       });
     }
 
-    const result = await saveSession({
-      advisor_name,
-      client_name,
-      reunion_mode: reunion_mode || '2_reuniones',
-      current_station: current_station || 1,
-      status: status || 'apertura'
-    });
+    const sessionData = {
+      setter_id,
+      client_name
+    };
+
+    // Enviar reunion_mode solo si viene (para sobrescribir el default si aplica)
+    if (reunion_mode) {
+      sessionData.reunion_mode = reunion_mode;
+    }
+
+    const result = await saveSession(sessionData);
 
     if (!result.success) {
+      console.error('Supabase session error:', result.error);
       return res.status(500).json({
         error: 'Failed to create session',
         details: result.error
