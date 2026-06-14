@@ -396,6 +396,8 @@ function Dashboard() {
   const [adminSecret, setAdminSecret] = useState('');
   const [adminCatalog, setAdminCatalog] = useState([]);
   const [adminCatalogLoading, setAdminCatalogLoading] = useState(false);
+  const [station4Catalog, setStation4Catalog] = useState([]);
+  const [station4CatalogLoading, setStation4CatalogLoading] = useState(false);
   const [adminNewProject, setAdminNewProject] = useState({
     project_name: '',
     project_state: 'Blanco',
@@ -432,6 +434,22 @@ function Dashboard() {
       loadAdminCatalog();
     }
   }, [adminMode, adminSecret]);
+
+  // Load station 4 catalog when entering projects form
+  React.useEffect(() => {
+    if (step === 'station_4_projects_form' && station4Catalog.length === 0) {
+      setStation4CatalogLoading(true);
+      fetch('/api/admin/catalog')
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            setStation4Catalog(data.projects || []);
+          }
+        })
+        .catch(err => console.error('Catalog load error:', err))
+        .finally(() => setStation4CatalogLoading(false));
+    }
+  }, [step]);
 
   // ESTACIÓN 1: Guardar sesión y registrar evento
   const saveSessionAndProceed = async () => {
@@ -751,6 +769,24 @@ function Dashboard() {
     }
 
     return uploadedUrls;
+  };
+
+  // ESTACIÓN 4: Pre-fill project from catalog
+  const selectProjectFromCatalog = (catalogProject) => {
+    setCurrentProject({
+      project_number: currentProject.project_number,
+      project_state: catalogProject.project_state || 'Blanco',
+      comuna: catalogProject.comuna || '',
+      address: catalogProject.address || '',
+      gmaps_link: catalogProject.gmaps_link || '',
+      amenities: catalogProject.amenities || '',
+      typologies: catalogProject.typologies || '',
+      price_from_uf: catalogProject.price_from_uf || '',
+      local_rent_uf: catalogProject.local_rent_uf || '',
+      appreciation_percent: catalogProject.appreciation_percent || '',
+      image_urls: catalogProject.image_urls || []
+    });
+    setError(null);
   };
 
   // ESTACIÓN 4: Save project
@@ -2135,10 +2171,30 @@ function Dashboard() {
   if (step === 'station_4_projects_form') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
       e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
-      e('main', { style: { flex: 1, maxWidth: '900px', margin: '0 auto', padding: '32px', width: '100%' } },
+      e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px', width: '100%' } },
         // Banner
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 4 PARTE B: CARGAR PROYECTOS (' + (projects.length + 1) + '/3)')
+        ),
+
+        // Catálogo de proyectos disponibles
+        station4Catalog.length > 0 && (
+          e('div', { style: { marginBottom: '32px' } },
+            e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '🎯 Proyectos Disponibles del Catálogo'),
+            e('p', { style: { margin: '0 0 16px', fontSize: '13px', color: '#666' } }, 'Clickea uno para pre-rellenar el formulario o carga uno manualmente abajo'),
+            e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px', marginBottom: '32px' } },
+              ...station4Catalog.map((proj, idx) =>
+                e(ProjectCard, {
+                  key: idx,
+                  project: proj,
+                  isSelected: false,
+                  onClick: () => selectProjectFromCatalog(proj)
+                })
+              )
+            ),
+            e('hr', { style: { border: 'none', borderTop: '2px solid #ddd', margin: '32px 0' } }),
+            e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '✏️ O Carga Manualmente')
+          )
         ),
 
         // Formulario
