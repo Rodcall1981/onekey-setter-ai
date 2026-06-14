@@ -17,9 +17,9 @@ const DISCOVERY_QUESTIONS = [
   {
     id: 0,
     question: '¿Esta propiedad es para vivienda propia, segunda vivienda, o inversión?',
-    field: 'p_intention',
+    field: 'p0',
     inputs: {
-      intention: { type: 'tags', label: 'Intención', options: ['Vivienda propia', 'Segunda vivienda', 'Inversión'], multiSelect: false }
+      intention: { type: 'tags', label: 'Intención', options: ['Vivienda propia', 'Segunda vivienda', 'Inversión'] }
     },
     help: 'Define el perfil base: Vivienda Propia vs. Inversión (Primera/Inversionista/Experto según otros datos).'
   },
@@ -309,7 +309,7 @@ function Dashboard() {
 
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
-    p_intention: { intention: [], notes: '' },
+    p0: { intention: [], notes: '' },
     p1: { age: '', job_description: '', job_type: [], tenure: [], notes: '' },
     p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
     p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
@@ -644,7 +644,7 @@ function Dashboard() {
   const isDiscoveryQuestionComplete = (field) => {
     const answer = discoveryAnswers[field];
     switch (field) {
-      case 'p_intention':
+      case 'p0':
         return answer.intention.length > 0;
       case 'p1':
         return answer.age !== '' && (answer.job_type.length > 0 || answer.tenure.length > 0 || answer.job_description.trim() !== '');
@@ -668,8 +668,8 @@ function Dashboard() {
     }
   };
 
-  // Contar preguntas completadas (9 total: p_intention + p1-p8)
-  const discoveryCompletedCount = ['p_intention', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
+  // Contar preguntas completadas (9 total: p0 + p1-p8)
+  const discoveryCompletedCount = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
   const allDiscoveryComplete = discoveryCompletedCount === 9;
 
   // ESTACIÓN 3: Guardar Profile + Semáforo y avanzar
@@ -781,7 +781,7 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
-          p_intention: discoveryAnswers.p_intention.intention[0] || null,
+          p_intention: discoveryAnswers.p0.intention[0] || null,
           p1_age: discoveryAnswers.p1.age ? parseInt(discoveryAnswers.p1.age) : null,
           p1_job_description: discoveryAnswers.p1.job_description,
           p1_job_type: discoveryAnswers.p1.job_type[0] || null,

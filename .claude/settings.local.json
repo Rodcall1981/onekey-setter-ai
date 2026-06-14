@@ -30,7 +30,10 @@
       "Bash(node --check src/frontend/app.js)",
       "Bash(curl -s http://localhost:3001/health)",
       "Bash(chmod +x /tmp/test_station3_capacity.sh)",
-      "Bash(/tmp/test_station3_capacity.sh)"
+      "Bash(/tmp/test_station3_capacity.sh)",
+      "Bash(chmod +x /tmp/final_test.sh)",
+      "Bash(/tmp/final_test.sh)",
+      "Bash(git commit -m 'fix: correct p_intention field naming from p_intention to p0 *)"
     ]
   }
 }
