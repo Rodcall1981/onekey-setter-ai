@@ -12,6 +12,91 @@ Una cosa antes de partir: voy a tomar notas de la reunión para mandarte un resu
 
 Perfecto. La dinámica es simple: te voy a hacer unas preguntas, algunas personales sobre tu situación financiera. Necesito que seas lo más real posible — sin eso no puedo armarte nada serio. Al final, si lo que vemos te hace sentido, vas a poder dejar tu mejor opción asegurada. ¿De acuerdo? Partamos.`;
 
+// ESTACIÓN 2: DISCOVERY - 8 preguntas críticas del blueprint
+const DISCOVERY_QUESTIONS = [
+  {
+    id: 1,
+    question: 'Cuéntame, ¿en qué trabajas y hace cuánto?',
+    field: 'p1',
+    inputs: {
+      job_description: { type: 'text', label: 'Descripción del trabajo', placeholder: 'Ej: Ingeniero, Vendedor, Empresario...' },
+      job_type: { type: 'tags', label: 'Tipo de ocupación', options: ['Dependiente', 'Independiente', 'Empresario', 'Renta de inversiones'] },
+      tenure: { type: 'tags', label: 'Antigüedad', options: ['<1 año', '1-3 años', '3+ años'] }
+    },
+    help: 'Estabilidad de ingreso, base del semáforo crediticio.'
+  },
+  {
+    id: 2,
+    question: '¿Cuál es aproximadamente tu renta líquida mensual? ¿Y tienes deudas activas — hipotecario, consumo, tarjetas? ¿Cuánto en total?',
+    field: 'p2',
+    inputs: {
+      monthly_income: { type: 'number', label: 'Renta líquida mensual (CLP)', placeholder: '2000000' },
+      total_debt: { type: 'number', label: 'Deuda total (CLP)', placeholder: '5000000' },
+      debt_types: { type: 'tags', label: 'Tipo de deuda', options: ['Sin deudas', 'Deuda baja', 'Deuda media', 'Deuda alta', 'Morosidades'] }
+    },
+    help: 'Insumo directo del semáforo. La pregunta de morosidades es crítica.'
+  },
+  {
+    id: 3,
+    question: '¿Cuánto tienes disponible hoy para el pie? No es lo mismo armar estrategia con 5 millones que con 50.',
+    field: 'p3',
+    inputs: {
+      down_payment: { type: 'number', label: 'Pie disponible (CLP)', placeholder: '15000000' },
+      down_payment_range: { type: 'tags', label: 'Rango', options: ['🔴 No tiene pie / negativo', '$0 – $5MM', '$5MM – $15MM', '$15MM – $30MM', '$30MM – $50MM', '$50MM – $80MM', '$80MM+', '💰 Compra al contado'] }
+    },
+    help: 'Ancla la capacidad y alimenta el perfil y el semáforo.'
+  },
+  {
+    id: 4,
+    question: '¿Qué te motivó a buscar esto AHORA y no hace 3 años?',
+    field: 'p4',
+    inputs: {
+      motivation: { type: 'tags', label: 'Motivación', options: ['Juntó capital', 'Cambió situación', 'Miedo a quedar atrás', 'Oportunidad puntual', 'Exploración'] },
+      urgency: { type: 'slider', label: 'Urgencia (1-5)', min: 1, max: 5 }
+    },
+    help: 'Urgencia real vs exploración.'
+  },
+  {
+    id: 5,
+    question: '¿Y qué pasa si dentro de 3 años sigues sin invertir? ¿Cómo se ve tu situación?',
+    field: 'p5',
+    inputs: {
+      pain: { type: 'tags', label: 'Dolor', options: ['Quedarse igual', 'Perder poder adquisitivo', 'Frustración', 'Miedo a vejez/retiro', 'Indiferente'] },
+      intensity: { type: 'slider', label: 'Intensidad emocional (1-5)', min: 1, max: 5 }
+    },
+    help: 'Sin dolor con emoción (slider ≥3), el cliente no está listo.'
+  },
+  {
+    id: 6,
+    question: 'Aparte de la rentabilidad, ¿hay alguien específico en quien estés pensando con esto? Hijos, padres, tu retiro.',
+    field: 'p6',
+    inputs: {
+      anchor: { type: 'tags', label: 'Ancla emocional', options: ['Hijos', 'Pareja', 'Padres', 'Retiro propio', 'Solo rentabilidad'] }
+    },
+    help: 'La motivación emocional bajo la racional. Combustible para las palancas.'
+  },
+  {
+    id: 7,
+    question: '¿Con quién más vas a tomar esta decisión?',
+    field: 'p7',
+    inputs: {
+      decision_makers: { type: 'tags', label: 'Decisores', options: ['Solo yo', 'Pareja', 'Socio', 'Asesor financiero', 'Familia'] }
+    },
+    help: 'Si hay otro decisor, se incorpora ANTES de pedir reserva.'
+  },
+  {
+    id: 8,
+    question: 'Del 1 al 10, ¿qué tan listo estás para avanzar en los próximos 60 días? Y si encontráramos la opción ideal, ¿qué te llevaría a NO hacerlo?',
+    field: 'p8',
+    inputs: {
+      readiness: { type: 'slider', label: 'Prontitud (1-10)', min: 1, max: 10 },
+      friction: { type: 'tags', label: 'Frenos', options: ['Nada me frena', 'Necesito ver números', 'Miedo al crédito', 'Dudas del proyecto', 'Tema pareja', 'Otro'] }
+    },
+    help: 'Slider <7 → NO pedir reserva hoy → Nurturing. Slider ≥7 → luz verde.'
+  }
+];
+
+// Mantener las 15 preguntas viejas como fallback si es necesario
 const QUESTIONS = [
   {
     id: 1,
@@ -209,8 +294,23 @@ function Dashboard() {
   const [advisorName, setAdvisorName] = useState('');
   const [clientName, setClientName] = useState('');
   const [sessionId, setSessionId] = useState(null);
-  const [reunionMode, setReunionMode] = useState('2_reuniones'); // ESTACIÓN 1: modo configurable
-  const [consentGiven, setConsentGiven] = useState(false); // ESTACIÓN 1: consentimiento obligatorio
+  const [reunionMode, setReunionMode] = useState('2_reuniones');
+  const [consentGiven, setConsentGiven] = useState(false);
+
+  // ESTACIÓN 2: Discovery responses
+  const [discoveryAnswers, setDiscoveryAnswers] = useState({
+    p1: { job_description: '', job_type: [], tenure: [] },
+    p2: { monthly_income: '', total_debt: '', debt_types: [] },
+    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: [] },
+    p4: { motivation: [], urgency: 3 },
+    p5: { pain: [], intensity: 3 },
+    p6: { anchor: [] },
+    p7: { decision_makers: [], hidden_decisor_flag: false },
+    p8: { readiness: 5, friction: [] }
+  });
+  const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
+
+  // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
   const [analysis, setAnalysis] = useState(null);
@@ -265,11 +365,144 @@ function Dashboard() {
         })
       });
 
+      // 3. Registrar evento 'station_started' para Estación 2 (Discovery) al avanzar
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: newSessionId,
+          advisor_name: advisorName.trim(),
+          event_type: 'station_started',
+          station_number: 2
+        })
+      });
+
       // Avanzar a Estación 2 (Discovery)
       setStep('questions');
     } catch (err) {
       setError('Error: ' + err.message);
       console.error('saveSessionAndProceed error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ESTACIÓN 2: Actualizar respuesta de Discovery
+  const updateDiscoveryAnswer = (field, key, value) => {
+    setDiscoveryAnswers(prev => ({
+      ...prev,
+      [field]: { ...prev[field], [key]: value }
+    }));
+
+    // P3: calcular UF automáticamente
+    if (field === 'p3' && key === 'down_payment') {
+      const downPaymentClp = parseFloat(value) || 0;
+      const ufValue = downPaymentClp / 41000; // UF ref configurable
+      setDiscoveryAnswers(prev => ({
+        ...prev,
+        p3: { ...prev.p3, down_payment_uf: ufValue }
+      }));
+    }
+
+    // P7: marcar flag automático si no es "Solo yo"
+    if (field === 'p7' && key === 'decision_makers') {
+      const hasHiddenDecision = Array.isArray(value) && !value.includes('Solo yo') && value.length > 0;
+      setDiscoveryAnswers(prev => ({
+        ...prev,
+        p7: { ...prev.p7, hidden_decisor_flag: hasHiddenDecision }
+      }));
+    }
+  };
+
+  // Verificar si una pregunta está completada (al menos un valor)
+  const isDiscoveryQuestionComplete = (field) => {
+    const answer = discoveryAnswers[field];
+    switch (field) {
+      case 'p1':
+        return answer.job_type.length > 0 || answer.tenure.length > 0 || answer.job_description.trim() !== '';
+      case 'p2':
+        return answer.debt_types.length > 0 || answer.monthly_income !== '' || answer.total_debt !== '';
+      case 'p3':
+        return answer.down_payment_range.length > 0 || answer.down_payment !== '';
+      case 'p4':
+        return answer.motivation.length > 0 || answer.urgency !== 3;
+      case 'p5':
+        return answer.pain.length > 0 || answer.intensity !== 3;
+      case 'p6':
+        return answer.anchor.length > 0;
+      case 'p7':
+        return answer.decision_makers.length > 0;
+      case 'p8':
+        return answer.readiness !== 5 || answer.friction.length > 0;
+      default:
+        return false;
+    }
+  };
+
+  // Contar preguntas completadas
+  const discoveryCompletedCount = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'].filter(isDiscoveryQuestionComplete).length;
+  const allDiscoveryComplete = discoveryCompletedCount === 8;
+
+  // ESTACIÓN 2: Guardar Discovery
+  const saveDiscoveryAndProceed = async () => {
+    if (!allDiscoveryComplete) {
+      setError('Por favor completa todas las 8 preguntas antes de continuar');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Guardar respuestas de Discovery en Supabase
+      const discoveryResponse = await fetch('/api/discovery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          p1_job_description: discoveryAnswers.p1.job_description,
+          p1_job_type: discoveryAnswers.p1.job_type[0] || null,
+          p1_tenure: discoveryAnswers.p1.tenure[0] || null,
+          p2_monthly_income_clp: discoveryAnswers.p2.monthly_income ? parseFloat(discoveryAnswers.p2.monthly_income) : null,
+          p2_total_debt_clp: discoveryAnswers.p2.total_debt ? parseFloat(discoveryAnswers.p2.total_debt) : null,
+          p2_debt_types: discoveryAnswers.p2.debt_types,
+          p3_down_payment_clp: discoveryAnswers.p3.down_payment ? parseFloat(discoveryAnswers.p3.down_payment) : null,
+          p3_down_payment_uf: discoveryAnswers.p3.down_payment_uf || null,
+          p3_down_payment_range: discoveryAnswers.p3.down_payment_range[0] || null,
+          p4_motivation_tags: discoveryAnswers.p4.motivation,
+          p4_urgency_slider: discoveryAnswers.p4.urgency,
+          p5_pain_tags: discoveryAnswers.p5.pain,
+          p5_emotional_intensity_slider: discoveryAnswers.p5.intensity,
+          p6_emotional_anchors: discoveryAnswers.p6.anchor,
+          p7_decision_makers: discoveryAnswers.p7.decision_makers,
+          p7_has_hidden_decisor: discoveryAnswers.p7.hidden_decisor_flag,
+          p8_readiness_slider: discoveryAnswers.p8.readiness,
+          p8_friction_tags: discoveryAnswers.p8.friction
+        })
+      });
+
+      if (!discoveryResponse.ok) {
+        const errorData = await discoveryResponse.json();
+        throw new Error(errorData.message || 'Error al guardar Discovery');
+      }
+
+      // Registrar evento 'station_completed' para Estación 2
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          advisor_name: advisorName.trim(),
+          event_type: 'station_completed',
+          station_number: 2
+        })
+      });
+
+      // Avanzar a Estación 3 (Perfil + Semáforo)
+      setStep('profile_semaforo');
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('saveDiscoveryAndProceed error:', err);
     } finally {
       setLoading(false);
     }
@@ -576,8 +809,155 @@ function Dashboard() {
     );
   }
 
-  // Questions Screen
+  // ESTACIÓN 2: DISCOVERY
   if (step === 'questions') {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'discovery', advisorName, clientName, completedCount: discoveryCompletedCount }),
+      e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '32px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 250px', gap: '24px' } },
+        // Main content
+        e('div', null,
+          // Banner rojo fijo: CERO PROPIEDADES
+          e('div', { style: { background: '#b71c1c', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontWeight: '600', fontSize: '14px', display: 'flex', gap: '8px', alignItems: 'center' } },
+            e('span', { style: { fontSize: '18px' } }, '🚫'),
+            e('span', null, 'CERO PROPIEDADES HASTA TERMINAR ESTA ESTACIÓN')
+          ),
+
+          // Preguntas
+          ...DISCOVERY_QUESTIONS.map((q, idx) =>
+            e('div', { key: q.id, style: { background: '#fff', borderRadius: '8px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'hidden' } },
+              e('div', {
+                onClick: () => setExpandedDiscoveryQuestion(expandedDiscoveryQuestion === idx ? -1 : idx),
+                style: { padding: '16px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: isDiscoveryQuestionComplete(`p${q.id}`) ? '#e8f5e9' : '#fff', borderLeft: isDiscoveryQuestionComplete(`p${q.id}`) ? '3px solid #1b5e20' : '3px solid #ddd' }
+              },
+                e('div', { style: { flex: 1 } },
+                  e('div', { style: { fontSize: '15px', fontWeight: '600', color: '#000' } }, (isDiscoveryQuestionComplete(`p${q.id}`) ? '✓ ' : '') + 'P' + q.id + ': ' + q.question)
+                ),
+                e('span', { style: { fontSize: '20px', color: '#666' } }, expandedDiscoveryQuestion === idx ? '−' : '+')
+              ),
+              expandedDiscoveryQuestion === idx && e('div', { style: { padding: '16px', borderTop: '1px solid #eee', background: '#fafafa' } },
+                (() => {
+                  const field = `p${q.id}`;
+                  const answer = discoveryAnswers[field];
+
+                  return e('div', null,
+                    e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#666' } }, '💡 ' + q.help),
+
+                    // Inputs dinámicos según tipo
+                    Object.entries(q.inputs).map(([key, input]) => {
+                      if (input.type === 'text') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '6px' } }, input.label),
+                          e('input', {
+                            type: 'text',
+                            value: answer[key] || '',
+                            onChange: (evt) => updateDiscoveryAnswer(field, key, evt.target.value),
+                            placeholder: input.placeholder || '',
+                            style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
+                          })
+                        );
+                      } else if (input.type === 'number') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '6px' } }, input.label),
+                          e('input', {
+                            type: 'number',
+                            value: answer[key] || '',
+                            onChange: (evt) => updateDiscoveryAnswer(field, key, evt.target.value),
+                            placeholder: input.placeholder || '',
+                            style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
+                          })
+                        );
+                      } else if (input.type === 'tags') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, input.label),
+                          e('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
+                            input.options.map(opt =>
+                              e('button', {
+                                key: opt,
+                                onClick: () => {
+                                  const currentArray = answer[key] || [];
+                                  const newArray = currentArray.includes(opt) ? currentArray.filter(t => t !== opt) : [...currentArray, opt];
+                                  updateDiscoveryAnswer(field, key, newArray);
+                                },
+                                style: { padding: '8px 12px', background: (answer[key] || []).includes(opt) ? '#000' : '#f0f0f0', color: (answer[key] || []).includes(opt) ? '#fff' : '#000', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', transition: 'all 0.2s' }
+                              }, opt)
+                            )
+                          )
+                        );
+                      } else if (input.type === 'slider') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, input.label + ' (' + (answer[key] || input.min) + ')'),
+                          e('input', {
+                            type: 'range',
+                            min: input.min,
+                            max: input.max,
+                            value: answer[key] || input.min,
+                            onChange: (evt) => updateDiscoveryAnswer(field, key, parseInt(evt.target.value)),
+                            style: { width: '100%', cursor: 'pointer' }
+                          })
+                        );
+                      }
+                      return null;
+                    })
+                  );
+                })()
+              )
+            )
+          ),
+
+          // Botones de acción
+          e('div', { style: { display: 'flex', gap: '12px', marginTop: '32px' } },
+            e('button', {
+              onClick: () => setStep('apertura'),
+              style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Volver a Apertura'),
+            e('button', {
+              onClick: saveDiscoveryAndProceed,
+              disabled: !allDiscoveryComplete || loading,
+              style: { flex: 1, padding: '14px', background: allDiscoveryComplete && !loading ? '#1b5e20' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: allDiscoveryComplete && !loading ? 'pointer' : 'not-allowed' }
+            }, loading ? 'Guardando...' : '✓ Discovery Completo → Continuar a Perfil')
+          ),
+
+          error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginTop: '24px', borderLeft: '3px solid #ef5350' } },
+            e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, '❌ ' + error)
+          )
+        ),
+
+        // Panel lateral: Qué escuchar + Si se desvía
+        e('aside', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+          // Qué escuchar (fijo)
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', position: 'sticky', top: '16px' } },
+            e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#000' } }, '👂 Qué escuchar'),
+            e('ul', { style: { margin: '0', paddingLeft: '16px', fontSize: '12px', color: '#666', lineHeight: '1.6' } },
+              e('li', null, 'Silencios productivos: deja pensar'),
+              e('li', null, 'Toma nota visible'),
+              e('li', null, 'Si abre dolor: "Cuéntame más"')
+            )
+          ),
+
+          // Si se desvía (acordeón)
+          e('div', { style: { background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+            e('button', {
+              onClick: () => setExpandedDiscoveryQuestion(expandedDiscoveryQuestion === -2 ? -1 : -2),
+              style: { width: '100%', padding: '12px', background: '#f5f5f5', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '600', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }
+            },
+              e('span', null, '⚠️ Si se desvía'),
+              e('span', { style: { fontSize: '16px' } }, expandedDiscoveryQuestion === -2 ? '−' : '+')
+            ),
+            expandedDiscoveryQuestion === -2 && e('div', { style: { padding: '12px', borderTop: '1px solid #eee', background: '#fafafa', fontSize: '12px', color: '#666' } },
+              e('p', { style: { margin: '0 0 8px', fontWeight: '600' } }, '"¿Y qué departamentos tienen?"'),
+              e('p', { style: { margin: '0 0 12px', color: '#999', fontSize: '11px' } }, '"Ya llegamos a eso, promete. Dos preguntas más."'),
+              e('p', { style: { margin: '0 0 8px', fontWeight: '600' } }, '"No quiero dar números"'),
+              e('p', { style: { margin: '0', color: '#999', fontSize: '11px' } }, '"Un rango aproximado me basta para blindar tu caso."')
+            )
+          )
+        )
+      ),
+      e(Footer)
+    );
+  }
+
+  // OLD Questions Screen (fallback, will be removed after phase 2)
+  if (step === 'questions_old') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
       e(Header, { step, advisorName, clientName, completedCount }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px', width: '100%' } },

@@ -97,4 +97,25 @@ const registerEvent = async (eventData) => {
   }
 };
 
-module.exports = { saveAnalysis, saveClientProfile, saveSession, registerEvent };
+// ESTACIÓN 2: Guardar Discovery responses
+const saveDiscovery = async (discoveryData) => {
+  try {
+    console.log('saveDiscovery - inserting data:', discoveryData);
+    const { data, error } = await supabase
+      .from('discovery_responses')
+      .insert([discoveryData])
+      .select();
+
+    if (error) {
+      console.error('Supabase discovery insert error:', error.code, error.message, error.details);
+      throw error;
+    }
+    console.log('saveDiscovery - success, returned data:', data);
+    return { success: true, data: data[0] };
+  } catch (error) {
+    console.error('Supabase discovery error (catch):', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+module.exports = { saveAnalysis, saveClientProfile, saveSession, registerEvent, saveDiscovery };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { analyzeConversation } = require('../services/claudeService');
-const { saveAnalysis, saveSession, registerEvent } = require('../services/supabaseService');
+const { saveAnalysis, saveSession, registerEvent, saveDiscovery } = require('../services/supabaseService');
 const { validateCompleteness } = require('../services/geminiService');
 
 router.post('/analyze', async (req, res) => {
@@ -173,6 +173,46 @@ router.post('/events', async (req, res) => {
 
   } catch (error) {
     console.error('Events route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 2: Guardar Discovery responses
+router.post('/discovery', async (req, res) => {
+  try {
+    const { session_id, ...discoveryData } = req.body;
+
+    if (!session_id) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "session_id"'
+      });
+    }
+
+    const result = await saveDiscovery({
+      session_id,
+      ...discoveryData
+    });
+
+    if (!result.success) {
+      console.error('Supabase discovery error:', result.error);
+      return res.status(500).json({
+        error: 'Failed to save discovery',
+        details: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      id: result.data.id,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Discovery route error:', error);
     res.status(500).json({
       error: 'Server error',
       message: error.message
