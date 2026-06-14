@@ -41,8 +41,8 @@ const DISCOVERY_QUESTIONS = [
     question: '¿Cuánto tienes disponible hoy para el pie? No es lo mismo armar estrategia con 5 millones que con 50.',
     field: 'p3',
     inputs: {
-      down_payment: { type: 'number', label: 'Pie disponible (CLP)', placeholder: '15000000' },
-      down_payment_range: { type: 'tags', label: 'Rango', options: ['🔴 No tiene pie / negativo', '$0 – $5MM', '$5MM – $15MM', '$15MM – $30MM', '$30MM – $50MM', '$50MM – $80MM', '$80MM+', '💰 Compra al contado'] }
+      down_payment: { type: 'number', label: 'Pie disponible (CLP)', placeholder: '15000000', required: true },
+      contado: { type: 'checkbox', label: '💰 Compra al contado' }
     },
     help: 'Ancla la capacidad y alimenta el perfil y el semáforo.'
   },
@@ -301,7 +301,7 @@ function Dashboard() {
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
     p1: { job_description: '', job_type: [], tenure: [] },
     p2: { monthly_income: '', total_debt: '', debt_types: [] },
-    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: [] },
+    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false },
     p4: { motivation: [], urgency: 3 },
     p5: { pain: [], intensity: 3 },
     p6: { anchor: [] },
@@ -387,6 +387,18 @@ function Dashboard() {
     }
   };
 
+  // Helper: calcular rango de pie automáticamente
+  const calculateDownPaymentRange = (clp) => {
+    const amount = parseFloat(clp) || 0;
+    if (amount <= 0) return '🔴 No tiene pie / negativo';
+    if (amount <= 5000000) return '$0 – $5MM';
+    if (amount <= 15000000) return '$5MM – $15MM';
+    if (amount <= 30000000) return '$15MM – $30MM';
+    if (amount <= 50000000) return '$30MM – $50MM';
+    if (amount <= 80000000) return '$50MM – $80MM';
+    return '$80MM+';
+  };
+
   // ESTACIÓN 2: Actualizar respuesta de Discovery
   const updateDiscoveryAnswer = (field, key, value) => {
     setDiscoveryAnswers(prev => ({
@@ -394,13 +406,14 @@ function Dashboard() {
       [field]: { ...prev[field], [key]: value }
     }));
 
-    // P3: calcular UF automáticamente
+    // P3: calcular UF y rango automáticamente cuando cambia down_payment
     if (field === 'p3' && key === 'down_payment') {
       const downPaymentClp = parseFloat(value) || 0;
       const ufValue = downPaymentClp / 41000; // UF ref configurable
+      const range = calculateDownPaymentRange(downPaymentClp);
       setDiscoveryAnswers(prev => ({
         ...prev,
-        p3: { ...prev.p3, down_payment_uf: ufValue }
+        p3: { ...prev.p3, down_payment_uf: ufValue, down_payment_range: range }
       }));
     }
 
@@ -423,7 +436,8 @@ function Dashboard() {
       case 'p2':
         return answer.debt_types.length > 0 || answer.monthly_income !== '' || answer.total_debt !== '';
       case 'p3':
-        return answer.down_payment_range.length > 0 || answer.down_payment !== '';
+        // P3: OBLIGATORIO tener valor numérico en down_payment
+        return answer.down_payment !== '' && parseFloat(answer.down_payment) > 0;
       case 'p4':
         return answer.motivation.length > 0 || answer.urgency !== 3;
       case 'p5':
@@ -844,6 +858,42 @@ function Dashboard() {
 
                     // Inputs dinámicos según tipo
                     Object.entries(q.inputs).map(([key, input]) => {
+                      // ESPECIAL: P3 (down_payment)
+                      if (field === 'p3' && key === 'down_payment') {
+                        return e('div', { key, style: { marginBottom: '16px', padding: '12px', background: '#f9f9f9', borderRadius: '6px', border: '1px solid #e0e0e0' } },
+                          e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#000', marginBottom: '8px' } }, '💰 ' + input.label + ' (OBLIGATORIO)'),
+                          e('input', {
+                            type: 'number',
+                            value: answer[key] || '',
+                            onChange: (evt) => updateDiscoveryAnswer(field, key, evt.target.value),
+                            placeholder: input.placeholder || '',
+                            style: { width: '100%', padding: '10px', border: '2px solid ' + (answer[key] ? '#1b5e20' : '#ddd'), borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', marginBottom: '12px', fontWeight: '500' }
+                          }),
+                          // Mostrar cálculos automáticos
+                          answer[key] && parseFloat(answer[key]) > 0 && e('div', { style: { background: '#e8f5e9', padding: '12px', borderRadius: '6px', borderLeft: '3px solid #1b5e20' } },
+                            e('p', { style: { margin: '0 0 6px', fontSize: '12px', fontWeight: '600', color: '#1b5e20' } }, '✓ Rango detectado automáticamente:'),
+                            e('p', { style: { margin: '0 0 8px', fontSize: '14px', fontWeight: '600', color: '#1b5e20' } }, answer.down_payment_range || '—'),
+                            e('p', { style: { margin: '0', fontSize: '11px', color: '#558b2f' } }, 'UF: ' + (answer.down_payment_uf ? answer.down_payment_uf.toFixed(2) : '0'))
+                          )
+                        );
+                      }
+
+                      // ESPECIAL: P3 (contado checkbox)
+                      if (field === 'p3' && key === 'contado') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' } },
+                            e('input', {
+                              type: 'checkbox',
+                              checked: answer[key] || false,
+                              onChange: (evt) => updateDiscoveryAnswer(field, key, evt.target.checked),
+                              style: { width: '18px', height: '18px', cursor: 'pointer' }
+                            }),
+                            e('span', null, '💰 ' + input.label)
+                          )
+                        );
+                      }
+
+                      // Normal: text input
                       if (input.type === 'text') {
                         return e('div', { key, style: { marginBottom: '12px' } },
                           e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '6px' } }, input.label),
@@ -855,7 +905,10 @@ function Dashboard() {
                             style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
                           })
                         );
-                      } else if (input.type === 'number') {
+                      }
+
+                      // Normal: number input
+                      if (input.type === 'number') {
                         return e('div', { key, style: { marginBottom: '12px' } },
                           e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '6px' } }, input.label),
                           e('input', {
@@ -866,7 +919,10 @@ function Dashboard() {
                             style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
                           })
                         );
-                      } else if (input.type === 'tags') {
+                      }
+
+                      // Normal: tags (NO para P3 down_payment_range - eso es automático)
+                      if (input.type === 'tags') {
                         return e('div', { key, style: { marginBottom: '12px' } },
                           e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, input.label),
                           e('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px' } },
@@ -883,7 +939,10 @@ function Dashboard() {
                             )
                           )
                         );
-                      } else if (input.type === 'slider') {
+                      }
+
+                      // Normal: slider
+                      if (input.type === 'slider') {
                         return e('div', { key, style: { marginBottom: '12px' } },
                           e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, input.label + ' (' + (answer[key] || input.min) + ')'),
                           e('input', {
@@ -896,6 +955,22 @@ function Dashboard() {
                           })
                         );
                       }
+
+                      // Normal: checkbox
+                      if (input.type === 'checkbox') {
+                        return e('div', { key, style: { marginBottom: '12px' } },
+                          e('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' } },
+                            e('input', {
+                              type: 'checkbox',
+                              checked: answer[key] || false,
+                              onChange: (evt) => updateDiscoveryAnswer(field, key, evt.target.checked),
+                              style: { width: '18px', height: '18px', cursor: 'pointer' }
+                            }),
+                            e('span', null, input.label)
+                          )
+                        );
+                      }
+
                       return null;
                     })
                   );
