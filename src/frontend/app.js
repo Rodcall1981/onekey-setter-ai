@@ -2563,8 +2563,12 @@ function Dashboard() {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
       e(Header, { step: 'station_6', advisorName, clientName, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
-        e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
-          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '✅ ESTACIÓN 6: CIERRE + RESERVA')
+        e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '✅ ESTACIÓN 6: CIERRE + RESERVA'),
+          e('button', {
+            onClick: () => setStep('station_4_projects_view'),
+            style: { padding: '8px 16px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'all 0.2s' }
+          }, '← Volver a proyectos')
         ),
 
         // Cierre sugerido
