@@ -2543,7 +2543,7 @@ function Dashboard() {
             e('button', {
               onClick: () => setStep('station_5_objections'),
               style: { width: '100%', padding: '12px', background: '#ff9800', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-            }, '⚠️ Apareció una objeción (desde Station 6)')
+            }, '⚠️')
           )
         ),
 
@@ -2815,7 +2815,7 @@ function Dashboard() {
           e('button', {
             onClick: () => setStep('station_6_closing'),
             style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
-          }, '→ Cierre + Reserva')
+          }, '→ Reserva')
         )
       ),
       e(Footer)
