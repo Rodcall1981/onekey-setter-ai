@@ -518,54 +518,67 @@ function Dashboard() {
     const yellowThreshold = parseFloat(config.threshold_rojo || 35);
 
     // ========== AUTO-DETECT PERFIL ==========
-    // Reglas en orden (primera que calce gana)
-
-    // 1. INVERSIONISTA EXPERTO
-    const hasInvestmentProperties = d.p1_job_description &&
-      (d.p1_job_description.toLowerCase().includes('inversión') ||
-       d.p1_job_description.toLowerCase().includes('propiedad') ||
-       d.p6_emotional_anchors?.includes('Solo rentabilidad'));
-
-    const knowsIndicators = d.p1_job_description &&
-      (d.p1_job_description.toLowerCase().includes('cap rate') ||
-       d.p1_job_description.toLowerCase().includes('roi') ||
-       d.p1_job_description.toLowerCase().includes('plusvalía'));
-
-    const pie_uf = d.p3_down_payment_uf || 0;
+    // Primero: usar p_intention si está disponible
+    const intention = d.p_intention;
 
     let profileDetected = null;
     let profileAlt = null;
 
-    if (hasInvestmentProperties && knowsIndicators && pie_uf >= 1500) {
-      profileDetected = 'INVERSIONISTA_EXPERTO';
-    }
-    // 2. INVERSIONISTA
-    else if (
-      (hasInvestmentProperties || pie_uf >= 1000) &&
-      (d.p5_pain_tags?.includes('Perder poder adquisitivo') || d.p6_emotional_anchors?.includes('Solo rentabilidad')) &&
-      (d.p8_readiness_slider >= 7)
-    ) {
-      profileDetected = 'INVERSIONISTA';
-    }
-    // 3. PRIMERA INVERSIÓN
-    else if (
-      !hasInvestmentProperties &&
-      (d.p4_motivation_tags?.length > 0 || d.p5_pain_tags?.length > 0) &&
-      pie_uf >= 500 &&
-      (d.p8_readiness_slider >= 6)
-    ) {
-      profileDetected = 'PRIMERA_INVERSION';
-    }
-    // 4. VIVIENDA PROPIA (o default si dudoso)
-    else {
-      profileDetected = 'VIVIENDA_PROPIA';
-    }
-
-    // Si hay duda: mostrar TOP 2
-    if (!profileDetected || (knowsIndicators && !hasInvestmentProperties)) {
-      // Ambiguo: mostrar Inversionista vs Primera Inversión
-      profileDetected = 'INVERSIONISTA';
+    // Si la intención es explícita, usar eso como base
+    if (intention === 'Inversión') {
+      profileDetected = 'INVERSIONISTA'; // o INVERSIONISTA_EXPERTO si hay más señales
       profileAlt = 'PRIMERA_INVERSION';
+    } else if (intention === 'Segunda vivienda') {
+      profileDetected = 'INVERSIONISTA'; // Segunda vivienda es una forma de inversión
+      profileAlt = 'VIVIENDA_PROPIA';
+    } else if (intention === 'Vivienda propia') {
+      profileDetected = 'VIVIENDA_PROPIA';
+    } else {
+      // Si no hay intención explícita, hacer auto-detección como antes
+      const hasInvestmentProperties = d.p1_job_description &&
+        (d.p1_job_description.toLowerCase().includes('inversión') ||
+         d.p1_job_description.toLowerCase().includes('propiedad') ||
+         d.p6_emotional_anchors?.includes('Solo rentabilidad'));
+
+      const knowsIndicators = d.p1_job_description &&
+        (d.p1_job_description.toLowerCase().includes('cap rate') ||
+         d.p1_job_description.toLowerCase().includes('roi') ||
+         d.p1_job_description.toLowerCase().includes('plusvalía'));
+
+      const pie_uf = d.p3_down_payment_uf || 0;
+
+      // 1. INVERSIONISTA EXPERTO
+      if (hasInvestmentProperties && knowsIndicators && pie_uf >= 1500) {
+        profileDetected = 'INVERSIONISTA_EXPERTO';
+      }
+      // 2. INVERSIONISTA
+      else if (
+        (hasInvestmentProperties || pie_uf >= 1000) &&
+        (d.p5_pain_tags?.includes('Perder poder adquisitivo') || d.p6_emotional_anchors?.includes('Solo rentabilidad')) &&
+        (d.p8_readiness_slider >= 7)
+      ) {
+        profileDetected = 'INVERSIONISTA';
+      }
+      // 3. PRIMERA INVERSIÓN
+      else if (
+        !hasInvestmentProperties &&
+        (d.p4_motivation_tags?.length > 0 || d.p5_pain_tags?.length > 0) &&
+        pie_uf >= 500 &&
+        (d.p8_readiness_slider >= 6)
+      ) {
+        profileDetected = 'PRIMERA_INVERSION';
+      }
+      // 4. VIVIENDA PROPIA (o default si dudoso)
+      else {
+        profileDetected = 'VIVIENDA_PROPIA';
+      }
+
+      // Si hay duda: mostrar TOP 2
+      if (!profileDetected || (knowsIndicators && !hasInvestmentProperties)) {
+        // Ambiguo: mostrar Inversionista vs Primera Inversión
+        profileDetected = 'INVERSIONISTA';
+        profileAlt = 'PRIMERA_INVERSION';
+      }
     }
 
     // ========== CALCULATE BUYING CAPACITY ==========

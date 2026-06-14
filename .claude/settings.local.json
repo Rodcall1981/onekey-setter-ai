@@ -40,7 +40,8 @@
       "Bash(/tmp/test_summary.sh)",
       "Bash(curl -s http://localhost:3001/api/discovery/9903a649-9568-45e3-adb3-a219bdda71b0)",
       "Bash(curl -s -X POST http://localhost:3001/api/sessions -H 'Content-Type: application/json' -d '{\"setter_id\":\"test\",\"client_name\":\"Test\",\"reunion_mode\":\"1_reunion\"}')",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git commit -m 'fix: use p_intention field to determine profile base instead of auto-detection only *)"
     ]
   }
 }
