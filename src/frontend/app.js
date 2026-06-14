@@ -931,18 +931,11 @@ function Dashboard() {
         });
       }
 
-      console.log('DEBUG: About to set step. reunionMode=', reunionMode);
-      // TODO: crear componente profile_semaforo_reunion2
-      // Por ahora, ambos modos van a Station 4
-      console.log('DEBUG: Setting step to station_4_summary');
       setStep('station_4_summary');
-      console.log('DEBUG: Step set, exiting try block');
     } catch (err) {
-      console.error('DEBUG: Caught error:', err);
       setError('Error: ' + err.message);
       console.error('saveProfileSemaforoAndProceed error:', err);
     } finally {
-      console.log('DEBUG: Finally block - setting loading to false');
       setLoading(false);
     }
   };

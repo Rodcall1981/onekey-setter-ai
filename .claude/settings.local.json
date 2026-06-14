@@ -72,7 +72,8 @@
       "Bash(curl -s http://localhost:3001/api/summary/test)",
       "Bash(pkill -9 -f \"src/backend/server\")",
       "Bash(curl -s \"http://localhost:3001/api/my-sessions/test\")",
-      "Bash(git commit -m 'fix: remove non-existent updated_at column from sessions query *)"
+      "Bash(git commit -m 'fix: remove non-existent updated_at column from sessions query *)",
+      "Bash(git commit -m 'chore: remove debug console.log statements *)"
     ]
   }
 }
