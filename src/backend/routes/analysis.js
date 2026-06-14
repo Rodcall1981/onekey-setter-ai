@@ -1063,4 +1063,220 @@ router.post('/closing', async (req, res) => {
   }
 });
 
+// ADMIN: Catálogo de Proyectos
+// Middleware para validar ADMIN_SECRET
+const validateAdminSecret = (req, res, next) => {
+  const adminSecret = req.headers['x-admin-secret'];
+
+  if (!adminSecret || adminSecret !== process.env.ADMIN_SECRET) {
+    return res.status(401).json({
+      error: 'Unauthorized',
+      message: 'Invalid or missing admin secret'
+    });
+  }
+
+  next();
+};
+
+// GET /api/admin/catalog - listar catálogo (sin secret, público)
+router.get('/admin/catalog', async (req, res) => {
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('project_catalog')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      return res.status(500).json({
+        error: 'Failed to fetch catalog',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      projects: data || []
+    });
+
+  } catch (error) {
+    console.error('Catalog fetch error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// POST /api/admin/catalog - crear proyecto en catálogo (requiere ADMIN_SECRET)
+router.post('/admin/catalog', validateAdminSecret, async (req, res) => {
+  try {
+    const {
+      project_name,
+      project_state,
+      comuna,
+      address,
+      gmaps_link,
+      amenities,
+      typologies,
+      price_from_uf,
+      local_rent_uf,
+      appreciation_percent,
+      image_urls,
+      description
+    } = req.body;
+
+    if (!project_name || !project_state || !comuna || !address) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Requiere: project_name, project_state, comuna, address'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const projectData = {
+      project_name,
+      project_state,
+      comuna,
+      address,
+      gmaps_link: gmaps_link || null,
+      amenities: amenities || null,
+      typologies,
+      price_from_uf: price_from_uf ? parseFloat(price_from_uf) : null,
+      local_rent_uf: local_rent_uf ? parseFloat(local_rent_uf) : null,
+      appreciation_percent: appreciation_percent ? parseFloat(appreciation_percent) : null,
+      image_urls: image_urls || [],
+      description: description || null,
+      is_active: true
+    };
+
+    const { data, error } = await supabase
+      .from('project_catalog')
+      .insert([projectData])
+      .select();
+
+    if (error) {
+      console.error('Catalog insert error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to create project',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      project: data?.[0]
+    });
+
+  } catch (error) {
+    console.error('Catalog create error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// PUT /api/admin/catalog/:projectId - editar proyecto en catálogo
+router.put('/admin/catalog/:projectId', validateAdminSecret, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const updateData = req.body;
+
+    if (!projectId) {
+      return res.status(400).json({
+        error: 'Missing project ID'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('project_catalog')
+      .update(updateData)
+      .eq('id', projectId)
+      .select();
+
+    if (error) {
+      return res.status(500).json({
+        error: 'Failed to update project',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      project: data?.[0]
+    });
+
+  } catch (error) {
+    console.error('Catalog update error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// DELETE /api/admin/catalog/:projectId - eliminar proyecto (desactivar)
+router.delete('/admin/catalog/:projectId', validateAdminSecret, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectId) {
+      return res.status(400).json({
+        error: 'Missing project ID'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('project_catalog')
+      .update({ is_active: false })
+      .eq('id', projectId)
+      .select();
+
+    if (error) {
+      return res.status(500).json({
+        error: 'Failed to delete project',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Project deactivated'
+    });
+
+  } catch (error) {
+    console.error('Catalog delete error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

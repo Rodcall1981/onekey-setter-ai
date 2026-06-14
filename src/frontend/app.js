@@ -391,6 +391,27 @@ function Dashboard() {
   const [closingDay0Time, setClosingDay0Time] = useState('');
   const [closingSaving, setClosingSaving] = useState(false);
 
+  // Admin Mode
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminSecret, setAdminSecret] = useState('');
+  const [adminCatalog, setAdminCatalog] = useState([]);
+  const [adminCatalogLoading, setAdminCatalogLoading] = useState(false);
+  const [adminNewProject, setAdminNewProject] = useState({
+    project_name: '',
+    project_state: 'Blanco',
+    comuna: '',
+    address: '',
+    gmaps_link: '',
+    amenities: '',
+    typologies: '',
+    price_from_uf: '',
+    local_rent_uf: '',
+    appreciation_percent: '',
+    image_urls: [],
+    description: ''
+  });
+  const [adminUploadingImages, setAdminUploadingImages] = useState(false);
+
   // Load summary when entering Station 4
   React.useEffect(() => {
     if (step === 'station_4_summary' && !summary && sessionId) {
@@ -838,6 +859,105 @@ function Dashboard() {
     }
 
     return suggested;
+  };
+
+  // ADMIN: Cargar catálogo
+  const loadAdminCatalog = async () => {
+    setAdminCatalogLoading(true);
+    try {
+      const resp = await fetch('/api/admin/catalog');
+      const data = await resp.json();
+      if (data.success) {
+        setAdminCatalog(data.projects || []);
+      }
+    } catch (err) {
+      console.error('Catalog load error:', err);
+    } finally {
+      setAdminCatalogLoading(false);
+    }
+  };
+
+  // ADMIN: Guardar proyecto al catálogo
+  const handleAdminSaveProject = async () => {
+    if (!adminNewProject.project_name || !adminNewProject.comuna || !adminNewProject.address) {
+      setError('Campos obligatorios: nombre, comuna, dirección');
+      return;
+    }
+
+    if (!adminSecret.trim()) {
+      setError('Ingresa el ADMIN_SECRET para continuar');
+      return;
+    }
+
+    setAdminUploadingImages(true);
+    setError(null);
+
+    try {
+      const resp = await fetch('/api/admin/catalog', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Admin-Secret': adminSecret
+        },
+        body: JSON.stringify(adminNewProject)
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.message || 'Error al guardar proyecto');
+      }
+
+      const data = await resp.json();
+      setAdminCatalog([data.project, ...adminCatalog]);
+
+      // Limpiar form
+      setAdminNewProject({
+        project_name: '',
+        project_state: 'Blanco',
+        comuna: '',
+        address: '',
+        gmaps_link: '',
+        amenities: '',
+        typologies: '',
+        price_from_uf: '',
+        local_rent_uf: '',
+        appreciation_percent: '',
+        image_urls: [],
+        description: ''
+      });
+
+      alert('✅ Proyecto guardado al catálogo');
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('Admin save error:', err);
+    } finally {
+      setAdminUploadingImages(false);
+    }
+  };
+
+  // ADMIN: Borrar proyecto del catálogo
+  const handleAdminDeleteProject = async (projectId) => {
+    if (!window.confirm('¿Eliminar este proyecto del catálogo?')) return;
+
+    setAdminUploadingImages(true);
+
+    try {
+      const resp = await fetch(`/api/admin/catalog/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'X-Admin-Secret': adminSecret
+        }
+      });
+
+      if (!resp.ok) throw new Error('Error al eliminar');
+
+      setAdminCatalog(adminCatalog.filter(p => p.id !== projectId));
+      alert('✅ Proyecto eliminado');
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setAdminUploadingImages(false);
+    }
   };
 
   // Reset para nueva sesión
@@ -1430,6 +1550,161 @@ function Dashboard() {
     );
   }
 
+  // ADMIN MODE: Catálogo de Proyectos
+  if (adminMode && !step.includes('admin')) {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
+      e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+        e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 MODO ADMIN - Catálogo de Proyectos'),
+        e('button', {
+          onClick: () => { setAdminMode(false); setAdminSecret(''); },
+          style: { padding: '6px 12px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }
+        }, 'Salir')
+      ),
+
+      e('div', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%' } },
+        // Input secreto
+        adminSecret === '' && (
+          e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
+            e('label', { style: { display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: '600' } }, 'Ingresa ADMIN_SECRET:'),
+            e('div', { style: { display: 'flex', gap: '8px' } },
+              e('input', {
+                type: 'password',
+                placeholder: 'Contraseña admin',
+                value: adminSecret,
+                onChange: (evt) => setAdminSecret(evt.target.value),
+                style: { flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }
+              }),
+              e('button', {
+                onClick: () => { if (adminSecret) loadAdminCatalog(); },
+                style: { padding: '10px 20px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }
+              }, 'Acceder')
+            )
+          )
+        ),
+
+        adminSecret && (
+          e('div', null,
+            // Cargar nuevo proyecto
+            e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
+              e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, '➕ Cargar Proyecto al Catálogo'),
+
+              e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+                e('input', {
+                  type: 'text',
+                  placeholder: 'Nombre proyecto',
+                  value: adminNewProject.project_name,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_name: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                }),
+                e('select', {
+                  value: adminNewProject.project_state,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_state: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                },
+                  e('option', null, 'Blanco'),
+                  e('option', null, 'Verde'),
+                  e('option', null, 'Entrega inmediata')
+                )
+              ),
+
+              e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+                e('input', {
+                  type: 'text',
+                  placeholder: 'Comuna',
+                  value: adminNewProject.comuna,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, comuna: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                }),
+                e('input', {
+                  type: 'text',
+                  placeholder: 'Dirección',
+                  value: adminNewProject.address,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, address: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                })
+              ),
+
+              e('input', {
+                type: 'text',
+                placeholder: 'Google Maps link',
+                value: adminNewProject.gmaps_link,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, gmaps_link: evt.target.value }),
+                style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }
+              }),
+
+              e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' } },
+                e('input', {
+                  type: 'number',
+                  placeholder: 'Precio desde UF',
+                  value: adminNewProject.price_from_uf,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, price_from_uf: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                }),
+                e('input', {
+                  type: 'number',
+                  placeholder: 'Arriendo zona UF',
+                  value: adminNewProject.local_rent_uf,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, local_rent_uf: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                }),
+                e('input', {
+                  type: 'number',
+                  placeholder: 'Plusvalía %',
+                  value: adminNewProject.appreciation_percent,
+                  onChange: (evt) => setAdminNewProject({ ...adminNewProject, appreciation_percent: evt.target.value }),
+                  style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+                })
+              ),
+
+              e('textarea', {
+                placeholder: 'Amenities (separadas por coma)',
+                value: adminNewProject.amenities,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, amenities: evt.target.value }),
+                style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+              }),
+
+              e('textarea', {
+                placeholder: 'Tipologías',
+                value: adminNewProject.typologies,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, typologies: evt.target.value }),
+                style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+              }),
+
+              e('button', {
+                onClick: handleAdminSaveProject,
+                disabled: adminUploadingImages,
+                style: { width: '100%', padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+              }, adminUploadingImages ? '⏳ Guardando...' : '✅ Guardar Proyecto')
+            ),
+
+            error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', borderRadius: '6px', padding: '12px', marginBottom: '24px', color: '#c62828', fontSize: '13px' } }, error),
+
+            // Catálogo actual
+            e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
+              e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, `📚 Catálogo (${adminCatalog.length} proyectos)`),
+              adminCatalogLoading ? e('p', null, 'Cargando...') : (
+                e('div', { style: { display: 'grid', gap: '12px' } },
+                  ...adminCatalog.map(proj =>
+                    e('div', { style: { padding: '12px', background: '#f9f9f9', borderLeft: '3px solid #000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                      e('div', null,
+                        e('p', { style: { margin: '0 0 4px', fontWeight: '600', fontSize: '13px' } }, proj.project_name),
+                        e('p', { style: { margin: '0', fontSize: '12px', color: '#666' } }, proj.comuna + ' • ' + proj.project_state)
+                      ),
+                      e('button', {
+                        onClick: () => handleAdminDeleteProject(proj.id),
+                        style: { padding: '6px 12px', background: '#ef5350', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
+                      }, 'Eliminar')
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    );
+  }
+
   // ESTACIÓN 1: APERTURA
   if (step === 'apertura') {
     const script = APERTURA_SCRIPT.replace('{clientName}', clientName).replace('{advisorName}', advisorName);
@@ -1556,6 +1831,10 @@ function Dashboard() {
           onClick: () => setStep('setup'),
           style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
         }, 'Volver'),
+        e('button', {
+          onClick: () => setAdminMode(true),
+          style: { padding: '14px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }
+        }, '🔐'),
         e('button', {
           onClick: saveSessionAndProceed,
           disabled: !canProceed || loading,
