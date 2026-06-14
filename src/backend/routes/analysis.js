@@ -91,6 +91,105 @@ router.post('/validate', async (req, res) => {
   }
 });
 
+// ESTACIÓN 1: Obtener sesiones recientes del setter
+router.get('/my-sessions/:setterId', async (req, res) => {
+  try {
+    const { setterId } = req.params;
+
+    if (!setterId) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "setterId"'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    // Obtener sesiones del setter, últimas 15, ordenadas por fecha
+    const { data: sessions, error } = await supabase
+      .from('sessions')
+      .select('id, client_name, reunion_mode, created_at, updated_at')
+      .eq('setter_id', setterId)
+      .order('updated_at', { ascending: false })
+      .limit(15);
+
+    if (error) {
+      console.error('Supabase sessions fetch error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch sessions',
+        details: error.message
+      });
+    }
+
+    // Enriquecer con progreso de cada sesión
+    const enrichedSessions = await Promise.all((sessions || []).map(async (session) => {
+      // Verificar si tiene discovery
+      const { data: discovery } = await supabase
+        .from('discovery_responses')
+        .select('id')
+        .eq('session_id', session.id)
+        .single();
+
+      // Verificar si tiene profile
+      const { data: profile } = await supabase
+        .from('profile_semaforo')
+        .select('id')
+        .eq('session_id', session.id)
+        .single();
+
+      // Verificar si tiene proyectos
+      const { data: projects } = await supabase
+        .from('station4_projects')
+        .select('id')
+        .eq('session_id', session.id);
+
+      // Calcular progreso
+      let progress = 0;
+      let stage = 'S1'; // Station 1
+
+      if (discovery) {
+        progress = 30;
+        stage = 'S2';
+      }
+      if (profile) {
+        progress = 60;
+        stage = 'S3';
+      }
+      if (projects && projects.length > 0) {
+        progress = 100;
+        stage = 'S4';
+      }
+
+      return {
+        id: session.id,
+        client_name: session.client_name,
+        reunion_mode: session.reunion_mode,
+        progress: progress,
+        stage: stage,
+        has_projects: (projects || []).length > 0,
+        updated_at: session.updated_at,
+        created_at: session.created_at
+      };
+    }));
+
+    res.json({
+      success: true,
+      sessions: enrichedSessions
+    });
+
+  } catch (error) {
+    console.error('My sessions route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 // ESTACIÓN 1: Crear sesión
 router.post('/sessions', async (req, res) => {
   try {

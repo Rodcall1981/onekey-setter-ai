@@ -63,7 +63,8 @@
       "Bash(git commit -m 'fix: add null check for profileSemaforo before accessing properties *)",
       "Bash(git commit -m 'fix: route both reunion modes to Station 4 summary for now *)",
       "Bash(npm install *)",
-      "Bash(git commit -m 'feat: add backend endpoint for secure image upload to Storage *)"
+      "Bash(git commit -m 'feat: add backend endpoint for secure image upload to Storage *)",
+      "Bash(git commit -m 'feat: add session recovery dashboard for 2-reunion workflow *)"
     ]
   }
 }

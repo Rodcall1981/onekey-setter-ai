@@ -348,6 +348,26 @@ function Dashboard() {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
 
+  // Session recovery
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  // Load recent sessions when user enters their name
+  React.useEffect(() => {
+    if (advisorName.trim() && step === 'apertura' && !loadingSessions) {
+      setLoadingSessions(true);
+      fetch(`/api/my-sessions/${advisorName.trim()}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.sessions) {
+            setRecentSessions(data.sessions);
+          }
+        })
+        .catch(err => console.error('Fetch sessions error:', err))
+        .finally(() => setLoadingSessions(false));
+    }
+  }, [advisorName, step]);
+
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
@@ -1254,6 +1274,58 @@ function Dashboard() {
         // Banner de estado
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 1: APERTURA')
+        ),
+
+        // Sesiones recientes
+        recentSessions.length > 0 && e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px', borderLeft: '4px solid #1b5e20' } },
+          e('p', { style: { margin: '0 0 16px', fontSize: '13px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '📋 MIS SESIONES RECIENTES'),
+          e('div', { style: { display: 'grid', gap: '12px' } },
+            ...recentSessions.slice(0, 5).map(sess =>
+              e('button', {
+                onClick: async () => {
+                  setLoading(true);
+                  setSessionId(sess.id);
+                  setClientName(sess.client_name);
+                  setReunionMode(sess.reunion_mode);
+                  // Jump to Station 4 if session is complete (has projects)
+                  if (sess.progress >= 60) {
+                    setStep('station_4_summary');
+                  } else {
+                    setStep('questions');
+                  }
+                  setLoading(false);
+                },
+                style: {
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  background: '#fff',
+                  border: '1px solid #c8e6c9',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  textAlign: 'left'
+                }
+              },
+                e('div', null,
+                  e('div', { style: { fontWeight: '600', color: '#000', marginBottom: '4px' } }, sess.client_name),
+                  e('div', { style: { fontSize: '11px', color: '#666' } }, sess.stage + ' • ' + (sess.reunion_mode === '2_reuniones' ? '2 reuniones' : '1 reunión'))
+                ),
+                e('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                  e('div', { style: { fontSize: '11px', fontWeight: '600', color: '#1b5e20', textAlign: 'right', minWidth: '40px' } }, sess.progress + '%'),
+                  e('div', { style: { width: '60px', height: '4px', background: '#c8e6c9', borderRadius: '2px', overflow: 'hidden' } },
+                    e('div', { style: { height: '100%', background: '#1b5e20', width: sess.progress + '%', transition: 'width 0.3s' } })
+                  )
+                )
+              )
+            )
+          ),
+          e('button', {
+            onClick: () => { setRecentSessions([]); },
+            style: { marginTop: '12px', width: '100%', padding: '10px', background: 'transparent', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+          }, '+ Nueva sesión')
         ),
 
         // Guión
