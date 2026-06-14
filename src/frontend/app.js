@@ -330,6 +330,24 @@ function Dashboard() {
   // ESTACIÓN 4: Summary Panel
   const [summary, setSummary] = useState(null);
 
+  // ESTACIÓN 4: Projects Form
+  const [projects, setProjects] = useState([]);  // Array de proyectos guardados
+  const [currentProject, setCurrentProject] = useState({
+    project_number: 1,
+    project_state: 'Blanco',
+    comuna: '',
+    address: '',
+    gmaps_link: '',
+    amenities: '',
+    typologies: '',
+    price_from_uf: '',
+    local_rent_uf: '',
+    appreciation_percent: '',
+    image_urls: []
+  });
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [projectsLoaded, setProjectsLoaded] = useState(false);
+
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
@@ -619,6 +637,136 @@ function Dashboard() {
     if (amount <= 50000000) return '$30MM – $50MM';
     if (amount <= 80000000) return '$50MM – $80MM';
     return '$80MM+';
+  };
+
+  // ESTACIÓN 4: Upload images to Storage
+  const uploadProjectImages = async (files) => {
+    if (!files || files.length === 0) return [];
+
+    setUploadingImages(true);
+    const uploadedUrls = [];
+
+    try {
+      // Crear cliente de Supabase en el frontend
+      const supabaseUrl = 'https://elnjwiwhijblkadcoloh.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVsbmp3aXdoaWpibGthZGNvbG9oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTkxNDU3MzgsImV4cCI6MjAzNDcyMTczOH0.TwzYQHCt5DhQPEqyxvQGagbvPvS4rTXArkqPEqCqaEE';
+      const { createClient } = window.supabase || {};
+
+      if (!createClient) {
+        throw new Error('Supabase client not available');
+      }
+
+      const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 8);
+        const filename = `${sessionId}_${timestamp}_${randomStr}_${file.name}`;
+
+        const { data, error } = await supabaseClient
+          .storage
+          .from('station4_project_images')
+          .upload(filename, file);
+
+        if (error) {
+          console.error('Upload error:', error);
+          throw new Error(`Error uploading ${file.name}: ${error.message}`);
+        }
+
+        // Construir URL pública
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/station4_project_images/${filename}`;
+        uploadedUrls.push(publicUrl);
+      }
+    } catch (err) {
+      setError('Error al subir imágenes: ' + err.message);
+      console.error('Image upload error:', err);
+    } finally {
+      setUploadingImages(false);
+    }
+
+    return uploadedUrls;
+  };
+
+  // ESTACIÓN 4: Save project
+  const saveProject = async () => {
+    if (!currentProject.comuna || !currentProject.address || !currentProject.typologies || !currentProject.price_from_uf) {
+      setError('Por favor completa los campos obligatorios');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const projectResp = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          session_id: sessionId,
+          project_number: currentProject.project_number,
+          project_state: currentProject.project_state,
+          comuna: currentProject.comuna,
+          address: currentProject.address,
+          gmaps_link: currentProject.gmaps_link,
+          amenities: currentProject.amenities,
+          typologies: currentProject.typologies,
+          price_from_uf: parseFloat(currentProject.price_from_uf),
+          local_rent_uf: currentProject.local_rent_uf ? parseFloat(currentProject.local_rent_uf) : null,
+          appreciation_percent: currentProject.appreciation_percent ? parseFloat(currentProject.appreciation_percent) : null,
+          image_urls: currentProject.image_urls
+        })
+      });
+
+      if (!projectResp.ok) {
+        throw new Error('Error al guardar proyecto');
+      }
+
+      // Agregar a array de proyectos
+      setProjects([...projects, { ...currentProject, project_number: currentProject.project_number }]);
+
+      // Limpiar formulario si se pueden agregar más (máximo 3)
+      if (currentProject.project_number < 3) {
+        setCurrentProject({
+          project_number: currentProject.project_number + 1,
+          project_state: 'Blanco',
+          comuna: '',
+          address: '',
+          gmaps_link: '',
+          amenities: '',
+          typologies: '',
+          price_from_uf: '',
+          local_rent_uf: '',
+          appreciation_percent: '',
+          image_urls: []
+        });
+        setError(null);
+      } else {
+        // Avanzar a la vista de presentación
+        setStep('station_4_projects_view');
+      }
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('Save project error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ESTACIÓN 4: Load projects for session
+  const loadProjects = async () => {
+    if (projectsLoaded) return;
+
+    try {
+      const resp = await fetch(`/api/projects/${sessionId}`);
+      const data = await resp.json();
+      if (data.success && data.projects) {
+        setProjects(data.projects);
+      }
+      setProjectsLoaded(true);
+    } catch (err) {
+      console.error('Load projects error:', err);
+    }
   };
 
   // ESTACIÓN 2: Actualizar respuesta de Discovery
@@ -1274,6 +1422,170 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 4: FORMULARIO DE PROYECTOS (PARTE B)
+  if (step === 'station_4_projects_form') {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '900px', margin: '0 auto', padding: '32px', width: '100%' } },
+        // Banner
+        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 4 PARTE B: CARGAR PROYECTOS (' + (projects.length + 1) + '/3)')
+        ),
+
+        // Formulario
+        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+          e('h3', { style: { margin: '0 0 20px', color: '#000', fontSize: '16px', fontWeight: '600' } }, 'Proyecto ' + currentProject.project_number),
+
+          // Estado
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Estado del proyecto'),
+            e('select', {
+              value: currentProject.project_state,
+              onChange: (evt) => setCurrentProject({ ...currentProject, project_state: evt.target.value }),
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+            },
+              e('option', null, 'Blanco'),
+              e('option', null, 'Verde'),
+              e('option', null, 'Entrega inmediata')
+            )
+          ),
+
+          // Comuna y Dirección (2 columnas)
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' } },
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Comuna *'),
+              e('input', {
+                type: 'text',
+                value: currentProject.comuna,
+                onChange: (evt) => setCurrentProject({ ...currentProject, comuna: evt.target.value }),
+                placeholder: 'Ej: Las Condes',
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Dirección *'),
+              e('input', {
+                type: 'text',
+                value: currentProject.address,
+                onChange: (evt) => setCurrentProject({ ...currentProject, address: evt.target.value }),
+                placeholder: 'Ej: Av. Kennedy 5555',
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            )
+          ),
+
+          // Google Maps link
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Link a Google Maps'),
+            e('input', {
+              type: 'text',
+              value: currentProject.gmaps_link,
+              onChange: (evt) => setCurrentProject({ ...currentProject, gmaps_link: evt.target.value }),
+              placeholder: 'https://maps.google.com/...',
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          // Amenities
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Amenities (Ej: Piscina, Gimnasio)'),
+            e('input', {
+              type: 'text',
+              value: currentProject.amenities,
+              onChange: (evt) => setCurrentProject({ ...currentProject, amenities: evt.target.value }),
+              placeholder: 'Piscina, Gimnasio, Terraza...',
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          // Tipologías
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Tipologías *'),
+            e('input', {
+              type: 'text',
+              value: currentProject.typologies,
+              onChange: (evt) => setCurrentProject({ ...currentProject, typologies: evt.target.value }),
+              placeholder: 'Ej: 1D, 2D, 3D',
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          // Precios (3 columnas)
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' } },
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Precio desde (UF) *'),
+              e('input', {
+                type: 'number',
+                value: currentProject.price_from_uf,
+                onChange: (evt) => setCurrentProject({ ...currentProject, price_from_uf: evt.target.value }),
+                placeholder: '3000',
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Arriendo zona (UF/mes)'),
+              e('input', {
+                type: 'number',
+                value: currentProject.local_rent_uf,
+                onChange: (evt) => setCurrentProject({ ...currentProject, local_rent_uf: evt.target.value }),
+                placeholder: '20',
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '6px' } }, 'Plusvalía (%)'),
+              e('input', {
+                type: 'number',
+                value: currentProject.appreciation_percent,
+                onChange: (evt) => setCurrentProject({ ...currentProject, appreciation_percent: evt.target.value }),
+                placeholder: '3',
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            )
+          ),
+
+          // Upload de imágenes
+          e('div', { style: { marginBottom: '16px', padding: '16px', background: '#f9f9f9', borderRadius: '6px', border: '2px dashed #ddd' } },
+            e('label', { style: { display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '10px' } }, '📸 Subir imágenes del proyecto'),
+            e('input', {
+              type: 'file',
+              multiple: true,
+              accept: 'image/*',
+              onChange: async (evt) => {
+                const files = Array.from(evt.target.files);
+                if (files.length > 0) {
+                  const urls = await uploadProjectImages(files);
+                  setCurrentProject({ ...currentProject, image_urls: [...currentProject.image_urls, ...urls] });
+                }
+              },
+              disabled: uploadingImages,
+              style: { width: '100%', cursor: uploadingImages ? 'not-allowed' : 'pointer' }
+            }),
+            uploadingImages && e('p', { style: { margin: '8px 0 0', fontSize: '12px', color: '#1b5e20' } }, '⏳ Subiendo imágenes...'),
+            currentProject.image_urls.length > 0 && e('p', { style: { margin: '8px 0 0', fontSize: '12px', color: '#1b5e20' } }, '✓ ' + currentProject.image_urls.length + ' imagen(es) subida(s)')
+          ),
+
+          // Mensajes
+          error && e('div', { style: { background: '#ffebee', color: '#c62828', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px' } }, error),
+
+          // Botones
+          e('div', { style: { display: 'flex', gap: '12px' } },
+            e('button', {
+              onClick: saveProject,
+              disabled: loading || uploadingImages,
+              style: { flex: 1, padding: '12px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }
+            }, loading ? '⏳ Guardando...' : (projects.length < 3 ? 'Guardar y agregar otro' : 'Guardar proyecto')),
+            projects.length > 0 && e('button', {
+              onClick: () => { loadProjects(); setStep('station_4_projects_view'); },
+              style: { flex: 1, padding: '12px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Ver proyectos cargados (' + projects.length + ')')
+          )
+        )
+      ),
+      e(Footer)
+    );
+  }
+
   // ESTACIÓN 4: RESUMEN (Panel)
   if (step === 'station_4_summary') {
     // Cargar resumen si no está cargado
@@ -1393,9 +1705,9 @@ function Dashboard() {
             style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
           }, '← Volver a Discovery'),
           e('button', {
-            disabled: true,
-            style: { flex: 1, padding: '14px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'default', opacity: 0.7 }
-          }, '✓ Resumen Aprobado')
+            onClick: () => setStep('station_4_projects_form'),
+            style: { flex: 1, padding: '14px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, 'Continuar a Proyectos →')
         )
       ),
       e(Footer)

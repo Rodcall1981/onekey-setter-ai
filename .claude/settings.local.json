@@ -42,7 +42,14 @@
       "Bash(curl -s -X POST http://localhost:3001/api/sessions -H 'Content-Type: application/json' -d '{\"setter_id\":\"test\",\"client_name\":\"Test\",\"reunion_mode\":\"1_reunion\"}')",
       "Bash(git commit -m ' *)",
       "Bash(git commit -m 'fix: use p_intention field to determine profile base instead of auto-detection only *)",
-      "Bash(git commit -m 'fix: traffic_light column not-null constraint in profile_semaforo save *)"
+      "Bash(git commit -m 'fix: traffic_light column not-null constraint in profile_semaforo save *)",
+      "Bash(xargs ls -la)",
+      "Bash(curl -s https://glowing-rolypoly-77be01.netlify.app/)",
+      "Bash(curl -s https://raw.githubusercontent.com/onekey/cotizador/main/README.md)",
+      "Bash(curl -s http://localhost:3001/api/health)",
+      "Bash(chmod +x /tmp/test_station4_parte_a.sh)",
+      "Bash(/tmp/test_station4_parte_a.sh)",
+      "Bash(git commit -m 'feat: implement Station 4 Part B - Project upload form *)"
     ]
   }
 }

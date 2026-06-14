@@ -496,4 +496,124 @@ router.get('/summary/:sessionId', async (req, res) => {
   }
 });
 
+// ESTACIÓN 4: Guardar proyectos
+router.post('/projects', async (req, res) => {
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const {
+      session_id,
+      project_number,
+      project_state,
+      comuna,
+      address,
+      gmaps_link,
+      amenities,
+      typologies,
+      price_from_uf,
+      local_rent_uf,
+      appreciation_percent,
+      image_urls
+    } = req.body;
+
+    if (!session_id || !project_number || !project_state || !comuna || !address || !typologies || !price_from_uf) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Requiere: session_id, project_number, project_state, comuna, address, typologies, price_from_uf'
+      });
+    }
+
+    const projectData = {
+      session_id,
+      project_number,
+      project_state,
+      comuna,
+      address,
+      gmaps_link: gmaps_link || null,
+      amenities: amenities || null,
+      typologies,
+      price_from_uf: parseFloat(price_from_uf),
+      local_rent_uf: local_rent_uf ? parseFloat(local_rent_uf) : null,
+      appreciation_percent: appreciation_percent ? parseFloat(appreciation_percent) : null,
+      image_urls: image_urls || []
+    };
+
+    const { data, error } = await supabase
+      .from('station4_projects')
+      .insert([projectData])
+      .select();
+
+    if (error) {
+      console.error('Supabase project insert error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to save project',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      id: data[0].id,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Project save route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
+// ESTACIÓN 4: Obtener proyectos de una sesión
+router.get('/projects/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        error: 'Missing parameters',
+        message: 'Requiere "sessionId"'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('station4_projects')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('project_number', { ascending: true });
+
+    if (error) {
+      console.error('Supabase projects fetch error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to fetch projects',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      projects: data || []
+    });
+
+  } catch (error) {
+    console.error('Projects fetch route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;
