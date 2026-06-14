@@ -26,7 +26,11 @@
       "Bash(pkill -f \"npm start\" || true *)",
       "Bash(curl -s -X POST http://localhost:3001/api/profile-semaforo -H 'Content-Type: application/json' -d '{ *)",
       "Bash(chmod +x /tmp/test_station3.sh)",
-      "Bash(/tmp/test_station3.sh)"
+      "Bash(/tmp/test_station3.sh)",
+      "Bash(node --check src/frontend/app.js)",
+      "Bash(curl -s http://localhost:3001/health)",
+      "Bash(chmod +x /tmp/test_station3_capacity.sh)",
+      "Bash(/tmp/test_station3_capacity.sh)"
     ]
   }
 }

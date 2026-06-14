@@ -16,14 +16,15 @@ Perfecto. La dinámica es simple: te voy a hacer unas preguntas, algunas persona
 const DISCOVERY_QUESTIONS = [
   {
     id: 1,
-    question: 'Cuéntame, ¿en qué trabajas y hace cuánto?',
+    question: 'Cuéntame, ¿en qué trabajas, hace cuánto y qué edad tienes?',
     field: 'p1',
     inputs: {
+      age: { type: 'number', label: 'Edad', placeholder: '40', required: true },
       job_description: { type: 'text', label: 'Descripción del trabajo', placeholder: 'Ej: Ingeniero, Vendedor, Empresario...' },
       job_type: { type: 'tags', label: 'Tipo de ocupación', options: ['Dependiente', 'Independiente', 'Empresario', 'Renta de inversiones'] },
       tenure: { type: 'tags', label: 'Antigüedad', options: ['<1 año', '1-3 años', '3+ años'] }
     },
-    help: 'Estabilidad de ingreso, base del semáforo crediticio.'
+    help: 'Estabilidad de ingreso y plazo de crédito según edad.'
   },
   {
     id: 2,
@@ -299,7 +300,7 @@ function Dashboard() {
 
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
-    p1: { job_description: '', job_type: [], tenure: [], notes: '' },
+    p1: { age: '', job_description: '', job_type: [], tenure: [], notes: '' },
     p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
     p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
     p4: { motivation: [], urgency: 3, notes: '' },
@@ -396,6 +397,90 @@ function Dashboard() {
   };
 
   // ESTACIÓN 3: Helper functions para detectar perfil y semáforo
+  // ESTACIÓN 3: Calcular capacidad de compra basada en edad y renta
+  const calculateBuyingCapacity = async (sessionId) => {
+    // Leer discovery_responses
+    const discoveryResp = await fetch(`/api/discovery/${sessionId}`);
+    const discovery = await discoveryResp.json();
+
+    if (!discovery.success) {
+      setError('Error al cargar datos de Discovery');
+      return null;
+    }
+
+    const d = discovery.data;
+    const clientAge = parseInt(d.p1_age) || 0;
+    const monthlyIncomeClp = d.p2_monthly_income_clp || 1;
+
+    // Leer business_config
+    const configResp = await fetch('/api/business-config');
+    const configData = await configResp.json();
+    const config = configData.config || {};
+
+    const annualRatePercent = parseFloat(config.ANNUAL_RATE_PERCENT || 4.0);
+    const incomeToDividendRatio = parseFloat(config.INCOME_TO_DIVIDEND_RATIO || 25);
+    const loanToValuePercent = parseFloat(config.LOAN_TO_VALUE_PERCENT || 80);
+    const ufValueClp = parseFloat(config.UF_VALUE_CLP || 40771);
+
+    // 1. Calcular dividendo máximo mensual
+    const dividendMaxClp = (monthlyIncomeClp * incomeToDividendRatio) / 100;
+
+    // 2. Determinar plazo según edad
+    let loanTermYears = 0;
+    let ageCategory = '';
+    if (clientAge <= 45) {
+      loanTermYears = 30;
+      ageCategory = 'hasta 45 años';
+    } else if (clientAge <= 50) {
+      loanTermYears = 25;
+      ageCategory = '46-50 años';
+    } else if (clientAge <= 55) {
+      loanTermYears = 20;
+      ageCategory = '51-55 años';
+    } else if (clientAge <= 60) {
+      loanTermYears = 15;
+      ageCategory = '56-60 años';
+    } else if (clientAge <= 65) {
+      loanTermYears = 10;
+      ageCategory = '61-65 años';
+    } else {
+      loanTermYears = 0;
+      ageCategory = '66+ años (caso a caso)';
+    }
+
+    // 3. Fórmula de anualidad: PV = PMT × [1 - (1+i)^-n] / i
+    // PMT = dividendo máximo, i = tasa mensual, n = plazo en meses
+    let maxLoanAmountClp = 0;
+    if (loanTermYears > 0) {
+      const monthlyRate = (annualRatePercent / 100) / 12;
+      const monthCount = loanTermYears * 12;
+      const numerator = 1 - Math.pow(1 + monthlyRate, -monthCount);
+      const denominator = monthlyRate;
+      maxLoanAmountClp = dividendMaxClp * (numerator / denominator);
+    }
+
+    // 4. Valor de la propiedad = crédito / (LTV%)
+    const propertyValueClp = loanToValuePercent > 0 ? maxLoanAmountClp / (loanToValuePercent / 100) : 0;
+    const affordablePropertyUf = propertyValueClp / ufValueClp;
+
+    // 5. Dividendo estimado (lo que pagaría mensualmente)
+    const estimatedDividendClp = dividendMaxClp;
+
+    return {
+      clientAge,
+      ageCategory,
+      loanTermYears,
+      monthlyIncomeClp,
+      dividendMaxClp,
+      maxLoanAmountClp,
+      propertyValueClp,
+      affordablePropertyUf,
+      estimatedDividendClp,
+      annualRatePercent,
+      ufValueClp
+    };
+  };
+
   const detectProfileAndSemaforo = async (sessionId) => {
     // Leer discovery_responses
     const discoveryResp = await fetch(`/api/discovery/${sessionId}`);
@@ -469,45 +554,31 @@ function Dashboard() {
       profileAlt = 'PRIMERA_INVERSION';
     }
 
-    // ========== AUTO-CALCULATE SEMÁFORO ==========
-    const monthlyIncomeCLP = d.p2_monthly_income_clp || 1;
-    const propertyValueUF = pie_uf * 10; // pie ≈ 10%
-    const estimatedDividendUF = propertyValueUF / divisor;
+    // ========== CALCULATE BUYING CAPACITY ==========
+    // Llamar a calculateBuyingCapacity para obtener datos de capacidad
+    const capacity = await calculateBuyingCapacity(sessionId);
 
-    // FÓRMULA CORREGIDA: mensual vs mensual, sin anualizar
-    const dividendCLP = estimatedDividendUF * ufValueClp;
-    const dividendToIncomePercent = (dividendCLP / monthlyIncomeCLP) * 100;
-
-    let trafficLight = 'ROJO';
-    let semafiroRationale = '';
-
-    const hasMoreosidades = d.p2_debt_types?.includes('Morosidades');
-    const pieIsAtLeast10Percent = pie_uf >= (propertyValueUF * 0.1);
-
-    if (dividendToIncomePercent <= greenThreshold && !hasMoreosidades && pieIsAtLeast10Percent) {
-      trafficLight = 'VERDE';
-      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta, sin morosidades, pie ${pie_uf.toFixed(2)} UF`;
-    } else if (dividendToIncomePercent <= yellowThreshold && !hasMoreosidades) {
-      trafficLight = 'AMARILLO';
-      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta (25-35%), necesita trabajo de crédito`;
-    } else if (hasMoreosidades) {
-      trafficLight = 'ROJO';
-      semafiroRationale = 'Morosidades activas detectadas';
-    } else if (pie_uf === 0) {
-      trafficLight = 'ROJO';
-      semafiroRationale = 'Sin pie disponible';
-    } else {
-      trafficLight = 'ROJO';
-      semafiroRationale = `Dividendo ${dividendToIncomePercent.toFixed(1)}% de renta (>35%)`;
+    if (!capacity) {
+      setError('Error al calcular capacidad de compra');
+      return null;
     }
 
     return {
       profileDetected,
       profileAlt,
-      trafficLight,
-      estimatedDividendUF: estimatedDividendUF.toFixed(2),
-      dividendToIncomePercent: dividendToIncomePercent.toFixed(2),
-      semafiroRationale
+      capacity: {
+        clientAge: capacity.clientAge,
+        ageCategory: capacity.ageCategory,
+        loanTermYears: capacity.loanTermYears,
+        monthlyIncomeClp: capacity.monthlyIncomeClp,
+        dividendMaxClp: capacity.dividendMaxClp,
+        maxLoanAmountClp: capacity.maxLoanAmountClp,
+        propertyValueClp: capacity.propertyValueClp,
+        affordablePropertyUf: capacity.affordablePropertyUf,
+        estimatedDividendClp: capacity.estimatedDividendClp,
+        annualRatePercent: capacity.annualRatePercent,
+        ufValueClp: capacity.ufValueClp
+      }
     };
   };
 
@@ -563,7 +634,7 @@ function Dashboard() {
     const answer = discoveryAnswers[field];
     switch (field) {
       case 'p1':
-        return answer.job_type.length > 0 || answer.tenure.length > 0 || answer.job_description.trim() !== '';
+        return answer.age !== '' && (answer.job_type.length > 0 || answer.tenure.length > 0 || answer.job_description.trim() !== '');
       case 'p2':
         return answer.debt_types.length > 0 || answer.monthly_income !== '' || answer.total_debt !== '';
       case 'p3':
@@ -590,8 +661,8 @@ function Dashboard() {
 
   // ESTACIÓN 3: Guardar Profile + Semáforo y avanzar
   const saveProfileSemaforoAndProceed = async () => {
-    if (!profileConfirmed || !semáforoConfirmed) {
-      setError('Por favor confirma tanto el perfil como el semáforo');
+    if (!profileConfirmed) {
+      setError('Por favor confirma el perfil');
       return;
     }
 
@@ -599,7 +670,9 @@ function Dashboard() {
     setError(null);
 
     try {
-      // Guardar en profile_semaforo
+      const capacity = profileSemaforo.capacity || {};
+
+      // Guardar en profile_semaforo con datos de capacidad
       const profileResp = await fetch('/api/profile-semaforo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -607,17 +680,18 @@ function Dashboard() {
           session_id: sessionId,
           profile_detected: selectedProfile,
           profile_corrected_by_advisor: selectedProfile !== profileSemaforo.profileDetected ? selectedProfile : null,
-          traffic_light: selectedSemaforo,
-          semaforo_rationale: profileSemaforo.semafiroRationale,
-          estimated_dividend_uf: parseFloat(profileSemaforo.estimatedDividendUF),
-          dividend_to_income_percent: parseFloat(profileSemaforo.dividendToIncomePercent),
+          traffic_light: null, // Ya no se usa; capacidad reemplaza al semáforo
+          loan_term_years: capacity.loanTermYears,
+          max_loan_amount_clp: capacity.maxLoanAmountClp,
+          affordable_property_uf: capacity.affordablePropertyUf,
+          estimated_dividend_clp: capacity.estimatedDividendClp,
           meeting_1_ended_at: reunionMode === '2_reuniones' ? new Date().toISOString() : null,
-          meeting_2_scheduled_at: null // Se guarda después si es modo 2 reuniones
+          meeting_2_scheduled_at: null
         })
       });
 
       if (!profileResp.ok) {
-        throw new Error('Error al guardar perfil y semáforo');
+        throw new Error('Error al guardar perfil y capacidad');
       }
 
       // Registrar evento 'station_completed' para Estación 3
@@ -645,23 +719,6 @@ function Dashboard() {
             metadata: {
               original: profileSemaforo.profileDetected,
               corrected: selectedProfile
-            }
-          })
-        });
-      }
-
-      if (selectedSemaforo !== profileSemaforo.trafficLight) {
-        await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            session_id: sessionId,
-            advisor_name: advisorName.trim(),
-            event_type: 'semaforo_corrected',
-            station_number: 3,
-            metadata: {
-              original: profileSemaforo.trafficLight,
-              corrected: selectedSemaforo
             }
           })
         });
@@ -711,6 +768,7 @@ function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sessionId,
+          p1_age: discoveryAnswers.p1.age ? parseInt(discoveryAnswers.p1.age) : null,
           p1_job_description: discoveryAnswers.p1.job_description,
           p1_job_type: discoveryAnswers.p1.job_type[0] || null,
           p1_tenure: discoveryAnswers.p1.tenure[0] || null,
@@ -1090,12 +1148,6 @@ function Dashboard() {
       'VIVIENDA_PROPIA': '#9c27b0'
     };
 
-    const semaforoColors = {
-      'VERDE': '#1b5e20',
-      'AMARILLO': '#ff9800',
-      'ROJO': '#b71c1c'
-    };
-
     const profileLabels = {
       'INVERSIONISTA_EXPERTO': 'Inversionista Experto',
       'INVERSIONISTA': 'Inversionista',
@@ -1103,23 +1155,15 @@ function Dashboard() {
       'VIVIENDA_PROPIA': 'Vivienda Propia'
     };
 
+    const capacity = profileSemaforo.capacity || {};
+    const showCaseByCase = capacity.loanTermYears === 0; // Edad 66+
+
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
       e(Header, { step: 'profile_semaforo', advisorName, clientName, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
         // Banner
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
-          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 3: PERFIL + SEMÁFORO')
-        ),
-
-        // Resumen de capas
-        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
-          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '📊 Resumen del Discovery:'),
-          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', color: '#666' } },
-            e('div', null, '💼 Situación: Renta ' + (discoveryAnswers.p2.monthly_income || 'N/A') + ' CLP, Deuda ' + (discoveryAnswers.p2.total_debt || 'N/A') + ' CLP'),
-            e('div', null, '💰 Pie: ' + (discoveryAnswers.p3.down_payment || '0') + ' CLP (' + (discoveryAnswers.p3.down_payment_uf || '0').toFixed(2) + ' UF)'),
-            e('div', null, '🎯 Motivación: ' + (discoveryAnswers.p4.motivation[0] || 'No especificada')),
-            e('div', null, '⚡ Prontitud: ' + discoveryAnswers.p8.readiness + '/10')
-          )
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 3: PERFIL + CAPACIDAD DE COMPRA')
         ),
 
         // PERFIL
@@ -1127,7 +1171,7 @@ function Dashboard() {
           e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '👤 PERFIL DETECTADO'),
           e('div', { style: { background: profileColors[profileSemaforo.profileDetected] || '#ccc', color: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center', fontSize: '16px', fontWeight: '600' } }, profileLabels[profileSemaforo.profileDetected]),
           profileSemaforo.profileAlt && e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px', color: '#666' } },
-            e('p', { style: { margin: '0 0 8px', fontWeight: '600' } }, '⚠️ Ambiguo entre:'),
+            e('p', { style: { margin: '0 0 8px', fontWeight: '600' } }, '⚠️ ¿Cuál te parece más acertado?'),
             e('div', { style: { display: 'flex', gap: '8px' } },
               e('button', {
                 onClick: () => setSelectedProfile(profileSemaforo.profileDetected),
@@ -1147,31 +1191,36 @@ function Dashboard() {
           )
         ),
 
-        // SEMÁFORO
+        // CAPACIDAD DE COMPRA
         e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
-          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '🚦 SEMÁFORO CREDITICIO'),
-          e('div', { style: { background: semaforoColors[profileSemaforo.trafficLight], color: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' } },
-            e('div', { style: { fontSize: '18px', fontWeight: '600', marginBottom: '8px' } },
-              profileSemaforo.trafficLight === 'VERDE' ? '🟢 VERDE' : (profileSemaforo.trafficLight === 'AMARILLO' ? '🟡 AMARILLO' : '🔴 ROJO')
-            ),
-            e('div', { style: { fontSize: '12px' } }, profileSemaforo.semafiroRationale)
-          ),
-          e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '11px', color: '#666' } },
-            'Dividendo: ' + profileSemaforo.dividendToIncomePercent + '% de renta | Pie: ' + profileSemaforo.estimatedDividendUF + ' UF'
-          ),
-          e('div', { style: { display: 'flex', gap: '8px', marginBottom: '16px' } },
-            ['VERDE', 'AMARILLO', 'ROJO'].map(traffic =>
-              e('button', {
-                key: traffic,
-                onClick: () => setSelectedSemaforo(traffic),
-                style: { flex: 1, padding: '8px', background: selectedSemaforo === traffic ? semaforoColors[traffic] : '#f0f0f0', color: selectedSemaforo === traffic ? '#fff' : '#000', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '500', cursor: 'pointer' }
-              }, traffic === 'VERDE' ? '🟢 Verde' : (traffic === 'AMARILLO' ? '🟡 Amarillo' : '🔴 Rojo'))
+          e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '💰 CAPACIDAD DE COMPRA ESTIMADA'),
+          showCaseByCase ?
+            e('div', { style: { background: '#fff3e0', padding: '16px', borderRadius: '8px', marginBottom: '16px', borderLeft: '4px solid #ff9800' } },
+              e('p', { style: { margin: '0', fontSize: '14px', fontWeight: '600', color: '#e65100' } }, '⚠️ ' + capacity.ageCategory),
+              e('p', { style: { margin: '8px 0 0', fontSize: '13px', color: '#bf360c' } }, 'Requiere evaluación caso a caso por edad y plazo. Conversemos con el equipo de crédito.')
+            ) :
+            e('div', { style: { background: '#f5f5f5', padding: '16px', borderRadius: '8px', marginBottom: '16px', borderLeft: '4px solid #1b5e20' } },
+              e('p', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '600', color: '#000' } }, 'Con tu renta y condiciones financieras:'),
+              e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' } },
+                e('div', null,
+                  e('p', { style: { margin: '0 0 4px', fontSize: '11px', color: '#666', fontWeight: '600' } }, '💳 Crédito máximo:'),
+                  e('p', { style: { margin: '0', fontSize: '16px', fontWeight: '700', color: '#1b5e20' } }, '$' + (capacity.maxLoanAmountClp || 0).toLocaleString('es-CL', {maximumFractionDigits: 0}) + ' CLP')
+                ),
+                e('div', null,
+                  e('p', { style: { margin: '0 0 4px', fontSize: '11px', color: '#666', fontWeight: '600' } }, '🏠 Propiedad alcanzable:'),
+                  e('p', { style: { margin: '0', fontSize: '16px', fontWeight: '700', color: '#1b5e20' } }, '~UF ' + (capacity.affordablePropertyUf || 0).toLocaleString('es-CL', {maximumFractionDigits: 0}))
+                ),
+                e('div', null,
+                  e('p', { style: { margin: '0 0 4px', fontSize: '11px', color: '#666', fontWeight: '600' } }, '📅 Plazo:'),
+                  e('p', { style: { margin: '0', fontSize: '16px', fontWeight: '700', color: '#1b5e20' } }, capacity.loanTermYears + ' años')
+                ),
+                e('div', null,
+                  e('p', { style: { margin: '0 0 4px', fontSize: '11px', color: '#666', fontWeight: '600' } }, '💰 Dividendo estimado:'),
+                  e('p', { style: { margin: '0', fontSize: '16px', fontWeight: '700', color: '#1b5e20' } }, '$' + (capacity.estimatedDividendClp || 0).toLocaleString('es-CL', {maximumFractionDigits: 0}) + '/mes')
+                )
+              ),
+              e('p', { style: { margin: '12px 0 0', fontSize: '11px', color: '#999', fontStyle: 'italic' } }, '📌 Estimado conservador a tasa ' + capacity.annualRatePercent + '% anual (mercado real ~3,9%). No es una oferta de crédito. Confirmar con banco.')
             )
-          ),
-          e('button', {
-            onClick: () => setSemáforoConfirmed(true),
-            style: { width: '100%', padding: '12px', background: semáforoConfirmed ? semaforoColors[selectedSemaforo] : '#e0e0e0', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
-          }, semáforoConfirmed ? '✅ Semáforo Confirmado' : '✓ Confirmar Semáforo')
         ),
 
         // Botones de acción
@@ -1182,9 +1231,9 @@ function Dashboard() {
           }, 'Volver a Discovery'),
           e('button', {
             onClick: saveProfileSemaforoAndProceed,
-            disabled: !profileConfirmed || !semáforoConfirmed || loading,
-            style: { flex: 1, padding: '14px', background: (profileConfirmed && semáforoConfirmed && !loading) ? '#1b5e20' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: (profileConfirmed && semáforoConfirmed && !loading) ? 'pointer' : 'not-allowed' }
-          }, loading ? 'Guardando...' : '✓ Confirmar Perfil + Semáforo')
+            disabled: !profileConfirmed || loading,
+            style: { flex: 1, padding: '14px', background: (profileConfirmed && !loading) ? '#1b5e20' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: (profileConfirmed && !loading) ? 'pointer' : 'not-allowed' }
+          }, loading ? 'Guardando...' : '✓ Confirmar y Continuar')
         ),
 
         error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginTop: '24px', borderLeft: '3px solid #ef5350' } },
