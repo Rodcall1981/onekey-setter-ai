@@ -87,7 +87,8 @@
       "Bash(tee /tmp/server_debug.log)",
       "Bash(curl -s -X POST http://localhost:3001/api/objections -H 'Content-Type: application/json' -d '{ *)",
       "Bash(git commit -m 'improve: use natural Chilean Spanish in objection handling *)",
-      "Bash(git commit -m 'feat: implement Station 6 \\(Cierre + Reserva\\) - final station *)"
+      "Bash(git commit -m 'feat: implement Station 6 \\(Cierre + Reserva\\) - final station *)",
+      "Bash(git commit -m 'chore: OneKey Closer - all 6 stations complete and tested *)"
     ]
   }
 }
