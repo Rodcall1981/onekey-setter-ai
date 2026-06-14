@@ -49,7 +49,12 @@
       "Bash(curl -s http://localhost:3001/api/health)",
       "Bash(chmod +x /tmp/test_station4_parte_a.sh)",
       "Bash(/tmp/test_station4_parte_a.sh)",
-      "Bash(git commit -m 'feat: implement Station 4 Part B - Project upload form *)"
+      "Bash(git commit -m 'feat: implement Station 4 Part B - Project upload form *)",
+      "Bash(chmod +x /tmp/test_projects.sh)",
+      "Bash(/tmp/test_projects.sh)",
+      "Bash(chmod +x /tmp/test_complete_flow.sh)",
+      "Bash(/tmp/test_complete_flow.sh)",
+      "Bash(git commit -m 'fix: move useEffect outside of JSX to correct hook position *)"
     ]
   }
 }

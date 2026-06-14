@@ -1586,22 +1586,22 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 4: Cargar resumen cuando se entra a Station 4
+  React.useEffect(() => {
+    if (step === 'station_4_summary' && !summary && sessionId) {
+      fetch(`/api/summary/${sessionId}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.summary) {
+            setSummary(data.summary);
+          }
+        })
+        .catch(err => console.error('Summary fetch error:', err));
+    }
+  }, [step, sessionId]);
+
   // ESTACIÓN 4: RESUMEN (Panel)
   if (step === 'station_4_summary') {
-    // Cargar resumen si no está cargado
-    React.useEffect(() => {
-      if (!summary && sessionId) {
-        fetch(`/api/summary/${sessionId}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.success && data.summary) {
-              setSummary(data.summary);
-            }
-          })
-          .catch(err => console.error('Summary fetch error:', err));
-      }
-    }, [sessionId, summary]);
-
     if (!summary) {
       return e('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
         e('p', null, 'Cargando resumen...')
