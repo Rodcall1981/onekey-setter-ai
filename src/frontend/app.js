@@ -834,12 +834,11 @@ function Dashboard() {
         })
       });
 
-      // Auto-detectar perfil y semáforo
+      // Auto-detectar perfil y capacidad
       const profileData = await detectProfileAndSemaforo(sessionId);
       if (profileData) {
         setProfileSemaforo(profileData);
         setSelectedProfile(profileData.profileDetected);
-        setSelectedSemaforo(profileData.trafficLight);
       }
 
       // Avanzar a Estación 3 (Perfil + Semáforo)

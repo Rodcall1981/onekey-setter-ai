@@ -33,7 +33,8 @@
       "Bash(/tmp/test_station3_capacity.sh)",
       "Bash(chmod +x /tmp/final_test.sh)",
       "Bash(/tmp/final_test.sh)",
-      "Bash(git commit -m 'fix: correct p_intention field naming from p_intention to p0 *)"
+      "Bash(git commit -m 'fix: correct p_intention field naming from p_intention to p0 *)",
+      "Bash(git commit -m 'fix: remove setSelectedSemaforo reference \\(already deleted state\\) *)"
     ]
   }
 }
