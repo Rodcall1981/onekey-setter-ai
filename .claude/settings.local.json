@@ -107,7 +107,8 @@
       "Bash(git commit -m 'feat: add image gallery modal with navigation *)",
       "Bash(git commit -m 'ui: add back button to Station 5 objeciones *)",
       "Bash(git commit -m 'ui: add back button to Station 6 cierre *)",
-      "Bash(git commit -m 'ui: remove '\\\\''Objeción'\\\\'' label from button, keep only symbol *)"
+      "Bash(git commit -m 'ui: remove '\\\\''Objeción'\\\\'' label from button, keep only symbol *)",
+      "Bash(git commit -m 'ui: add back button to Station 4 Part B *)"
     ]
   }
 }

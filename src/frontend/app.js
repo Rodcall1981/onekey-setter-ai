@@ -2946,6 +2946,10 @@ function Dashboard() {
         // Botones de acción
         e('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' } },
           e('button', {
+            onClick: () => setStep('profile_semaforo'),
+            style: { padding: '14px 28px', background: '#fff', border: '2px solid #666', color: '#666', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
+          }, '← Volver a Estación 3'),
+          e('button', {
             onClick: () => setStep('station_4_projects_form'),
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #1b5e20', color: '#1b5e20', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
           }, '➕ Cargar más proyectos'),
