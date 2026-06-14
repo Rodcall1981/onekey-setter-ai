@@ -400,6 +400,8 @@ function Dashboard() {
   const [station4CatalogLoading, setStation4CatalogLoading] = useState(false);
   const [station4CatalogFilter, setStation4CatalogFilter] = useState('');
   const [station4SelectedProjects, setStation4SelectedProjects] = useState(new Set());
+  const [galleryModal, setGalleryModal] = useState(null);
+  const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
   const [adminNewProject, setAdminNewProject] = useState({
     project_name: '',
     project_state: 'Blanco',
@@ -1039,6 +1041,128 @@ function Dashboard() {
     } finally {
       setAdminUploadingImages(false);
     }
+  };
+
+  // HELPER: Modal de galería
+  const GalleryModal = ({ images, currentIndex, onClose, onNext, onPrev }) => {
+    if (!images || images.length === 0) return null;
+
+    return e('div', {
+      onClick: onClose,
+      style: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0,0,0,0.9)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999
+      }
+    },
+      e('div', {
+        onClick: (evt) => evt.stopPropagation(),
+        style: {
+          position: 'relative',
+          maxWidth: '90vw',
+          maxHeight: '90vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }
+      },
+        // Imagen
+        e('img', {
+          src: images[currentIndex],
+          style: {
+            maxWidth: '100%',
+            maxHeight: '85vh',
+            objectFit: 'contain',
+            borderRadius: '8px'
+          }
+        }),
+
+        // Botón cerrar (X)
+        e('button', {
+          onClick: onClose,
+          style: {
+            position: 'absolute',
+            top: '-40px',
+            right: '0',
+            background: 'none',
+            border: 'none',
+            color: '#fff',
+            fontSize: '32px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            padding: '0'
+          }
+        }, '✕'),
+
+        // Botón anterior
+        images.length > 1 && (
+          e('button', {
+            onClick: onPrev,
+            style: {
+              position: 'absolute',
+              left: '-60px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              fontSize: '28px',
+              cursor: 'pointer',
+              padding: '10px 15px',
+              borderRadius: '4px',
+              ':hover': { background: 'rgba(255,255,255,0.4)' }
+            },
+            onMouseEnter: (evt) => evt.currentTarget.style.background = 'rgba(255,255,255,0.4)',
+            onMouseLeave: (evt) => evt.currentTarget.style.background = 'rgba(255,255,255,0.2)'
+          }, '‹')
+        ),
+
+        // Botón siguiente
+        images.length > 1 && (
+          e('button', {
+            onClick: onNext,
+            style: {
+              position: 'absolute',
+              right: '-60px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              fontSize: '28px',
+              cursor: 'pointer',
+              padding: '10px 15px',
+              borderRadius: '4px',
+              ':hover': { background: 'rgba(255,255,255,0.4)' }
+            },
+            onMouseEnter: (evt) => evt.currentTarget.style.background = 'rgba(255,255,255,0.4)',
+            onMouseLeave: (evt) => evt.currentTarget.style.background = 'rgba(255,255,255,0.2)'
+          }, '›')
+        ),
+
+        // Contador
+        images.length > 1 && (
+          e('div', {
+            style: {
+              position: 'absolute',
+              bottom: '-40px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: '600'
+            }
+          }, (currentIndex + 1) + ' / ' + images.length)
+        )
+      )
+    );
   };
 
   // HELPER: Renderizar ficha de proyecto (estilo marketplace)
@@ -2791,8 +2915,17 @@ function Dashboard() {
                   e('div', { style: { marginTop: '24px' } },
                     e('h3', { style: { margin: '0 0 12px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '📸 Galería'),
                     e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px' } },
-                      ...currentProject.image_urls.slice(0, 6).map(url =>
-                        e('img', { src: url, style: { width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0e0e0' } })
+                      ...currentProject.image_urls.map((url, idx) =>
+                        e('img', {
+                          src: url,
+                          onClick: () => {
+                            setGalleryModal(currentProject.image_urls);
+                            setGalleryCurrentIndex(idx);
+                          },
+                          style: { width: '100%', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e0e0e0', cursor: 'pointer', transition: 'transform 0.2s' },
+                          onMouseEnter: (evt) => evt.currentTarget.style.transform = 'scale(1.05)',
+                          onMouseLeave: (evt) => evt.currentTarget.style.transform = 'scale(1)'
+                        })
                       )
                     )
                   )
@@ -2818,7 +2951,15 @@ function Dashboard() {
           }, '→ Reserva')
         )
       ),
-      e(Footer)
+      e(Footer),
+      // Modal de galería
+      galleryModal && e(GalleryModal, {
+        images: galleryModal,
+        currentIndex: galleryCurrentIndex,
+        onClose: () => setGalleryModal(null),
+        onNext: () => setGalleryCurrentIndex((galleryCurrentIndex + 1) % galleryModal.length),
+        onPrev: () => setGalleryCurrentIndex((galleryCurrentIndex - 1 + galleryModal.length) % galleryModal.length)
+      })
     );
   }
 
