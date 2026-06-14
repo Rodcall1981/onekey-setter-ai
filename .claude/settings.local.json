@@ -78,7 +78,8 @@
       "Bash(curl -s \"http://localhost:3001/api/summary/8506ceb7-e29f-44b7-8abd-e6bccf1c29aa\")",
       "Bash(git commit -m 'fix: make summary endpoint more flexible for partial data *)",
       "Bash(git commit -m 'fix: use service role key for database operations with RLS *)",
-      "Bash(git commit -m 'feat: implement Station 4 PARTE C - Projects view presentation *)"
+      "Bash(git commit -m 'feat: implement Station 4 PARTE C - Projects view presentation *)",
+      "Bash(git commit -m 'feat: complete Station 4 \\(Projects & Levers & Anchors\\) *)"
     ]
   }
 }
