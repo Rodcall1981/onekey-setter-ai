@@ -2952,7 +2952,7 @@ function Dashboard() {
           e('button', {
             onClick: () => setStep('station_5_objections'),
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #ff9800', color: '#ff9800', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
-          }, '⚠️ Objeción'),
+          }, '⚠️'),
           e('button', {
             onClick: () => setStep('station_6_closing'),
             style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
