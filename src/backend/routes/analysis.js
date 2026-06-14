@@ -765,4 +765,187 @@ router.post('/upload-project-image', upload.single('file'), async (req, res) => 
   }
 });
 
+// ESTACIÓN 5: OBJECIONES
+const config = require('../config');
+const { Anthropic } = require('@anthropic-ai/sdk');
+
+// Las 5 objeciones grandes pre-resueltas (texto fijo del blueprint)
+const PREBUILT_OBJECTIONS = {
+  PENSAR_CON_PAREJA: {
+    tipo: 'PENSAR_CON_PAREJA',
+    titulo: 'Lo voy a pensar / lo converso con mi pareja',
+    pasos: {
+      paso_1_acuerdo: 'Por supuesto, una decisión así se piensa, y conversarla en pareja es lo correcto.',
+      paso_2_aislamiento: 'Antes de cerrar, déjame asegurarme: además de conversarlo con tu pareja, ¿hay algo más del proyecto, del flujo o del proceso que necesites resolver?',
+      paso_3_indagacion: 'Para que la conversación con tu pareja sea productiva, ¿qué crees que va a querer saber ella/él? Porque la pareja suele tener 2-3 preguntas específicas, y si no las llevas resueltas, queda en "mejor lo pensamos más".',
+      paso_4_reframe: 'Lo que mejor funciona es una llamada de 20 minutos con tu pareja. Yo le explico lo mismo que a ti — tú no tienes que ser el vendedor de tu propia inversión. ¿Mañana o pasado?',
+      paso_5_test: '¿Te calza martes 7 o miércoles 8?'
+    }
+  },
+  CARO_ESPERAR: {
+    tipo: 'CARO_ESPERAR',
+    titulo: 'Está caro / mejor espero que bajen las tasas',
+    pasos: {
+      paso_1_acuerdo: 'Te entiendo, es lo que mucha gente está pensando ahora.',
+      paso_2_aislamiento: '¿Es el precio del departamento lo que se siente caro, o es la cuota mensual lo que te preocupa? Son dos cosas distintas.',
+      paso_3_indagacion: '¿Con qué estás comparando para decir caro? ¿Otro proyecto, el precio de hace 2 años, tu presupuesto inicial?',
+      paso_4_reframe: 'Hace 2 años este modelo costaba UF X. Hoy UF Y. Subió Z%. El año que viene, con esa tendencia, UF W. Esperar te sale más caro que comprar caro. [Alternativo: Las tasas bajaron fuerte por última vez en XXXX. ¿Sabes qué pasó con los precios? Subieron X%. Cuando bajan las tasas sube la demanda, suben los precios y desaparece el inventario bueno. Esperar la tasa perfecta es llegar tarde.]',
+      paso_5_test: '¿Vemos las dos formas de financiar para que veas la cuota concreta y decidas desde ahí?'
+    }
+  },
+  COMPARAR_PROYECTOS: {
+    tipo: 'COMPARAR_PROYECTOS',
+    titulo: 'Quiero comparar con otros proyectos',
+    pasos: {
+      paso_1_acuerdo: 'Excelente, eso es lo que haría un buen inversor. Comparar mal es peor que no comparar.',
+      paso_2_aislamiento: '¿Qué proyectos específicos estás viendo? Te pregunto porque conozco casi todos los activos en venta en Santiago y te puedo ahorrar el análisis.',
+      paso_3_indagacion: '¿Qué criterios estás usando? Porque la mayoría compara precio por m², y ese es el que MENOS importa para inversión.',
+      paso_4_reframe: 'Para inversión importan: cap rate proyectado, tasa de captura de la comuna, plusvalía histórica vs proyectada, perfil del arrendatario, y costo total (no precio inicial). Te propongo algo: dame los 2-3 que estás viendo y armo la comparación con criterios reales. Si el otro gana, te lo digo y te ayudo a llevarlo. Mi negocio es que inviertas bien, no que inviertas conmigo.',
+      paso_5_test: '¿Te calza tener el comparativo para el viernes?'
+    }
+  },
+  SOLO_INFO: {
+    tipo: 'SOLO_INFO',
+    titulo: 'Solo quiero info, no quiero reunión / mándame todo',
+    pasos: {
+      paso_1_acuerdo: 'Claro, nadie quiere sentirse presionado.',
+      paso_2_aislamiento: '¿Qué es lo que no quieres que pase si nos juntamos a revisar tu caso?',
+      paso_3_indagacion: '(Escucha: casi siempre "que me presionen")',
+      paso_4_reframe: 'Te propongo algo distinto: en vez de mandarte 30 PDFs que vas a filtrar solo, hagamos 15 minutos donde te entrego el análisis personalizado de TU situación. Si al minuto 14 sientes que no aporta, cortas. ¿Justo?',
+      paso_5_test: '¿Tienes esos 15 minutos esta semana o la próxima?'
+    }
+  },
+  VER_PRESENCIAL: {
+    tipo: 'VER_PRESENCIAL',
+    titulo: 'Quiero ir a verlo antes de decidir',
+    pasos: {
+      paso_1_acuerdo: 'Me parece perfecto, y de hecho te lo recomiendo — una inversión así hay que verla en persona.',
+      paso_2_aislamiento: 'Antes de coordinar la visita, déjame preguntarte: si vas, te gusta lo que ves y los números te cierran, ¿hay algo más que te frenaría para avanzar?',
+      paso_3_indagacion: '(Si dice "no, nada más" = interés real, cierra con la visita. Si menciona algo más = ESE es el punto real, loopealo primero)',
+      paso_4_reframe: 'Hagamos esto: dejas la reserva de $100.000 ahora, congelamos la unidad, y vamos juntos a verla. Si en persona no te convence, te devuelvo el 100% ahí mismo y sin preguntas. Así no arriesgas nada, y te aseguras de que la unidad siga disponible cuando la veas — porque si la dejas suelta, perfectamente la toma otro antes de tu visita.',
+      paso_5_test: '¿Te parece? Dejamos la reserva y coordinamos la visita para [día]. ¿Te calza [opción A] o [opción B]?'
+    }
+  }
+};
+
+router.post('/objections', async (req, res) => {
+  try {
+    const { session_id, objection_type, objection_text, triggered_from_station, profile } = req.body;
+
+    if (!session_id || !objection_type || !triggered_from_station) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Requiere: session_id, objection_type, triggered_from_station'
+      });
+    }
+
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    let resolution_steps = {};
+    let is_predefined = false;
+    let ai_generated = false;
+
+    // MODO A: Objeciones pre-resueltas (5 grandes)
+    if (PREBUILT_OBJECTIONS[objection_type]) {
+      resolution_steps = PREBUILT_OBJECTIONS[objection_type].pasos;
+      is_predefined = true;
+    }
+    // MODO B: Objeción nueva (llamar a Claude Haiku)
+    else if (objection_type === config.OBJECTION_TYPES.NUEVA) {
+      if (!objection_text) {
+        return res.status(400).json({
+          error: 'Missing objection text',
+          message: 'Para objeción nueva, requiere: objection_text'
+        });
+      }
+
+      try {
+        const anthropic = new Anthropic({
+          apiKey: process.env.ANTHROPIC_API_KEY
+        });
+
+        const prompt = `Eres un coach de cierre inmobiliario chileno. El cliente (perfil: ${profile || 'desconocido'}) objetó: "${objection_text}".
+
+Aplica el loop de Belfort de 5 pasos (Acuerdo, Aislamiento, Indagación, Reframe, Test de cierre) y devuelve cada paso con una frase literal en chileno, lista para leer. Máximo 1-2 frases por paso. No inventes datos de proyecto; usa variables [X] donde falten cifras.
+
+Responde SOLO en JSON, así:
+{
+  "paso_1_acuerdo": "frase aquí",
+  "paso_2_aislamiento": "frase aquí",
+  "paso_3_indagacion": "frase aquí",
+  "paso_4_reframe": "frase aquí",
+  "paso_5_test": "frase aquí"
+}`;
+
+        const message = await anthropic.messages.create({
+          model: config.AI.OBJECTIONS_MODEL,
+          max_tokens: config.AI.OBJECTIONS_MAX_TOKENS,
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ]
+        });
+
+        const responseText = message.content[0].text;
+        resolution_steps = JSON.parse(responseText);
+        ai_generated = true;
+      } catch (aiError) {
+        console.error('Claude Haiku error:', aiError);
+        return res.status(500).json({
+          error: 'Failed to generate objection handling',
+          details: aiError.message
+        });
+      }
+    } else {
+      return res.status(400).json({
+        error: 'Invalid objection type',
+        message: 'Debe ser una de: ' + Object.keys(config.OBJECTION_TYPES).join(', ')
+      });
+    }
+
+    // Guardar en BD (sin created_at — usa default now())
+    const { data, error } = await supabase
+      .from('objections')
+      .insert([{
+        session_id,
+        objection_text: objection_text || PREBUILT_OBJECTIONS[objection_type]?.titulo || objection_type,
+        objection_type,
+        resolution_steps,
+        is_predefined,
+        ai_generated,
+        triggered_from_station
+      }])
+      .select();
+
+    if (error) {
+      console.error('Supabase objection insert error:', error.message);
+      return res.status(500).json({
+        error: 'Failed to save objection',
+        details: error.message
+      });
+    }
+
+    res.json({
+      success: true,
+      objection_id: data?.[0]?.id,
+      resolution_steps,
+      is_predefined,
+      ai_generated
+    });
+
+  } catch (error) {
+    console.error('Objections route error:', error);
+    res.status(500).json({
+      error: 'Server error',
+      message: error.message
+    });
+  }
+});
+
 module.exports = router;

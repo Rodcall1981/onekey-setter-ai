@@ -378,6 +378,12 @@ function Dashboard() {
   const [gaps, setGaps] = useState([]);
   const [validating, setValidating] = useState(false);
 
+  // Station 5: Objeciones
+  const [currentObjectionType, setCurrentObjectionType] = useState(null);
+  const [objectionsCustomText, setObjectionsCustomText] = useState('');
+  const [objectionsResolutionSteps, setObjectionsResolutionSteps] = useState(null);
+  const [objectionsGenerating, setObjectionsGenerating] = useState(false);
+
   // Load summary when entering Station 4
   React.useEffect(() => {
     if (step === 'station_4_summary' && !summary && sessionId) {
@@ -790,6 +796,45 @@ function Dashboard() {
       setProjectsLoaded(true);
     } catch (err) {
       console.error('Load projects error:', err);
+    }
+  };
+
+  // ESTACIÓN 5: Manejar objeción
+  const handleObjection = async (objectionType) => {
+    setCurrentObjectionType(objectionType);
+    setObjectionsGenerating(true);
+    setError(null);
+
+    try {
+      const payload = {
+        session_id: sessionId,
+        objection_type: objectionType,
+        triggered_from_station: 4,
+        profile: summary?.profile || 'Desconocido'
+      };
+
+      // Si es objeción nueva, agregar el texto
+      if (objectionType === 'NUEVA') {
+        payload.objection_text = objectionsCustomText;
+      }
+
+      const resp = await fetch('/api/objections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!resp.ok) {
+        throw new Error('Error al procesar objeción');
+      }
+
+      const data = await resp.json();
+      setObjectionsResolutionSteps(data.resolution_steps);
+    } catch (err) {
+      setError('Error: ' + err.message);
+      console.error('Objection error:', err);
+    } finally {
+      setObjectionsGenerating(false);
     }
   };
 
@@ -1661,6 +1706,151 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 5: OBJECIONES
+  if (step === 'station_5_objections') {
+    const PREBUILT_OBJECTIONS = {
+      PENSAR_CON_PAREJA: { titulo: 'Lo voy a pensar / lo converso con mi pareja', icon: '💭' },
+      CARO_ESPERAR: { titulo: 'Está caro / mejor espero que bajen las tasas', icon: '💰' },
+      COMPARAR_PROYECTOS: { titulo: 'Quiero comparar con otros proyectos', icon: '⚖️' },
+      SOLO_INFO: { titulo: 'Solo quiero info, no quiero reunión', icon: '📧' },
+      VER_PRESENCIAL: { titulo: 'Quiero ir a verlo antes de decidir', icon: '👁️' }
+    };
+
+    // Si está mostrando los pasos de resolución
+    if (objectionsResolutionSteps) {
+      return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+        e(Header, { step: 'station_5', advisorName, clientName, completedCount: 0 }),
+        e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
+          // Loop de 5 pasos (marco fijo)
+          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+            e('h2', { style: { margin: '0 0 20px', color: '#000', fontSize: '16px', fontWeight: '600' } }, '🎯 Loop de 5 Pasos para Desarmar Objeción'),
+
+            // Paso 1: Acuerdo
+            e('div', { style: { marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #eee' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '1️⃣ ACUERDO'),
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#333', lineHeight: '1.6' } }, objectionsResolutionSteps.paso_1_acuerdo || objectionsResolutionSteps.paso_1_acuerdo)
+            ),
+
+            // Paso 2: Aislamiento
+            e('div', { style: { marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #eee' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '2️⃣ AISLAMIENTO'),
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#333', lineHeight: '1.6' } }, objectionsResolutionSteps.paso_2_aislamiento)
+            ),
+
+            // Paso 3: Indagación
+            e('div', { style: { marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #eee' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '3️⃣ INDAGACIÓN'),
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#333', lineHeight: '1.6' } }, objectionsResolutionSteps.paso_3_indagacion)
+            ),
+
+            // Paso 4: Reframe
+            e('div', { style: { marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #eee' } },
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '4️⃣ REFRAME'),
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#333', lineHeight: '1.6' } }, objectionsResolutionSteps.paso_4_reframe)
+            ),
+
+            // Paso 5: Test de cierre
+            e('div', null,
+              e('p', { style: { margin: '0 0 8px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '5️⃣ TEST DE CIERRE'),
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#333', lineHeight: '1.6' } }, objectionsResolutionSteps.paso_5_test)
+            )
+          ),
+
+          // Botones de acción
+          e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center' } },
+            e('button', {
+              onClick: () => { setObjectionsResolutionSteps(null); setCurrentObjectionType(null); },
+              style: { padding: '12px 24px', background: '#fff', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+            }, '← Otra objeción'),
+            e('button', {
+              onClick: () => { setObjectionsResolutionSteps(null); setCurrentObjectionType(null); setStep('station_4_projects_view'); },
+              style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+            }, 'Objeción resuelta ✓')
+          )
+        ),
+        e(Footer)
+      );
+    }
+
+    // Mostrar selector de las 5 objeciones o formulario para nueva
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
+      e(Header, { step: 'station_5', advisorName, clientName, completedCount: 0 }),
+      e('main', { style: { flex: 1, maxWidth: '900px', margin: '0 auto', padding: '32px', width: '100%' } },
+        e('div', { style: { background: '#ff9800', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '⚠️ ESTACIÓN 5: OBJECIONES')
+        ),
+
+        // Las 5 grandes pre-resueltas
+        e('div', null,
+          e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '5 OBJECIONES GRANDES (guiones listos)'),
+          e('div', { style: { display: 'grid', gap: '12px', marginBottom: '24px' } },
+            ...Object.entries(PREBUILT_OBJECTIONS).map(([key, obj]) =>
+              e('button', {
+                onClick: () => handleObjection(key),
+                disabled: objectionsGenerating,
+                style: {
+                  padding: '16px',
+                  background: '#fff',
+                  border: '1px solid #ddd',
+                  borderRadius: '6px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#000',
+                  transition: 'all 0.2s',
+                  opacity: objectionsGenerating && currentObjectionType !== key ? 0.6 : 1
+                }
+              },
+                e('p', { style: { margin: '0 0 4px' } }, obj.icon + ' ' + obj.titulo)
+              )
+            )
+          )
+        ),
+
+        // Objeción nueva
+        e('div', null,
+          e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, 'OBJECIÓN NUEVA (genera IA)'),
+          e('textarea', {
+            value: objectionsCustomText,
+            onChange: (evt) => setObjectionsCustomText(evt.target.value),
+            placeholder: 'Escribe la objeción que plantó el cliente...',
+            style: {
+              width: '100%',
+              padding: '12px',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontFamily: 'inherit',
+              marginBottom: '12px',
+              boxSizing: 'border-box',
+              minHeight: '80px',
+              resize: 'vertical'
+            },
+            disabled: objectionsGenerating
+          }),
+          e('button', {
+            onClick: () => handleObjection('NUEVA'),
+            disabled: !objectionsCustomText.trim() || objectionsGenerating,
+            style: {
+              padding: '12px 24px',
+              background: objectionsGenerating ? '#ccc' : '#ff9800',
+              border: 'none',
+              color: '#fff',
+              borderRadius: '6px',
+              cursor: objectionsGenerating ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              fontSize: '14px'
+            }
+          }, objectionsGenerating ? '⏳ Generando (3-5 seg)...' : '🤖 Generar respuesta con IA')
+        ),
+
+        error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', borderRadius: '6px', padding: '12px', marginTop: '16px', color: '#c62828' } }, error)
+      ),
+      e(Footer)
+    );
+  }
+
   // ESTACIÓN 4: PARTE C - Vista de Proyectos
   if (step === 'station_4_projects_view') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
@@ -1756,11 +1946,15 @@ function Dashboard() {
         ),
 
         // Botones de acción
-        e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center' } },
+        e('div', { style: { display: 'flex', gap: '12px', marginTop: '24px', justifyContent: 'center', flexWrap: 'wrap' } },
           e('button', {
             onClick: () => setStep('station_4_projects_form'),
             style: { padding: '12px 24px', background: '#fff', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
           }, '← Agregar más proyectos'),
+          e('button', {
+            onClick: () => setStep('station_5_objections'),
+            style: { padding: '12px 24px', background: '#fff', border: '1px solid #ff9800', color: '#ff9800', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+          }, '⚠️ Apareció una objeción'),
           e('button', {
             onClick: () => { /* TODO: Cierre y siguiente flujo */ setStep('apertura'); },
             style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
