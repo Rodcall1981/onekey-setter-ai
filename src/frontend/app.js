@@ -1926,24 +1926,23 @@ function Dashboard() {
         e('div', { style: { textAlign: 'center', marginBottom: '40px' } },
           e('div', { style: { fontSize: '32px', fontWeight: '300', letterSpacing: '2px', color: '#1f2937', marginBottom: '12px' } }, 'onekey'),
           e('h1', { style: { margin: '0 0 12px', fontSize: '32px', fontWeight: '700', color: '#000' } }, 'Sistema calificación clientes'),
-          e('p', { style: { margin: '0', fontSize: '15px', color: '#6b7280', lineHeight: '1.5' } }, 'Acceso exclusivo equipo OneKey (correos @onekeybroker.com o @lupchile.com).')
+          e('p', { style: { margin: '0', fontSize: '15px', color: '#6b7280', lineHeight: '1.5' } }, 'Ingresa el nombre y apellido del cliente')
         ),
 
-        !adminToken ?
-          // No autenticado: Mostrar botón de Google
-          e('div', { style: { display: 'flex', justifyContent: 'center' } },
-            e('div', {
-              id: 'google-signin-button-setup',
-              style: {
-                width: '100%',
-                minHeight: '56px',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center'
-              }
-            })
-          )
-        :
+        // Botón de Google (visible solo si no está autenticado)
+        e('div', {
+          id: 'google-signin-button-setup',
+          style: {
+            width: '100%',
+            minHeight: '56px',
+            display: adminToken ? 'none' : 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: adminToken ? '0' : '24px'
+          }
+        }),
+
+        adminToken &&
           // Autenticado: Mostrar nombre y pedir cliente
           e('div', null,
             e('div', { style: { background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '16px', marginBottom: '28px' } },
