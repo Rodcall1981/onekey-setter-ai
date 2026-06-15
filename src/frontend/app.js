@@ -1920,68 +1920,79 @@ function Dashboard() {
 
   // Setup Screen
   if (step === 'setup') {
-    return e('div', { style: { background: 'linear-gradient(135deg, #f7f7f7 0%, #f0f2f5 100%)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
-      e('div', { style: { background: '#fff', borderRadius: '12px', padding: '48px', boxShadow: '0 8px 32px rgba(56,56,56,0.12)', maxWidth: '400px', width: '90%' } },
-        e('div', { style: { marginBottom: '32px' } },
-          e('div', { style: { fontSize: '28px', fontWeight: '300', color: '#383838', marginBottom: '16px', letterSpacing: '-0.5px' } }, 'onekey'),
-          e('h1', { style: { margin: '0 0 8px', fontSize: '28px', fontWeight: '700', color: '#000' } }, 'OneKey Setter'),
-          e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Estación 1: Apertura')
+    return e('div', { style: { background: '#f3f4f6', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' } },
+      e('div', { style: { background: '#fff', borderRadius: '20px', padding: '60px 40px', boxShadow: '0 10px 40px rgba(0,0,0,0.08)', maxWidth: '500px', width: '100%' } },
+        // Header
+        e('div', { style: { textAlign: 'center', marginBottom: '40px' } },
+          e('div', { style: { fontSize: '32px', fontWeight: '300', letterSpacing: '2px', color: '#1f2937', marginBottom: '12px' } }, 'onekey'),
+          e('h1', { style: { margin: '0 0 12px', fontSize: '32px', fontWeight: '700', color: '#000' } }, 'Cotizador OneKey'),
+          e('p', { style: { margin: '0', fontSize: '15px', color: '#6b7280', lineHeight: '1.5' } }, 'Acceso exclusivo equipo OneKey (correos @onekeybroker.com o @lupchile.com).')
         ),
 
         !adminToken ?
           // No autenticado: Mostrar botón de Google
           e('div', null,
-            e('p', { style: { margin: '0 0 16px', fontSize: '13px', fontWeight: '600', color: '#333' } }, '👤 Primero, inicia sesión con Google:'),
             e('div', {
               id: 'google-signin-button-setup',
               style: {
                 width: '100%',
-                minHeight: '50px',
+                minHeight: '56px',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 marginBottom: '24px'
               }
-            })
+            }),
+            e('div', { style: { textAlign: 'center', marginBottom: '24px' } },
+              e('p', { style: { margin: '0', fontSize: '14px', color: '#9ca3af' } }, 'o con tu correo')
+            ),
+            e('input', {
+              placeholder: 'tunombre@onekeybroker.com',
+              style: { width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f9fafb', color: '#6b7280' }
+            }),
+            e('button', {
+              style: { width: '100%', padding: '14px', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', marginTop: '24px', transition: 'background 0.3s' }
+            }, 'Enviarme el enlace de acceso')
           )
         :
-          // Autenticado: Mostrar nombre del asesor y pedir cliente
+          // Autenticado: Mostrar nombre y pedir cliente
           e('div', null,
-            e('div', { style: { marginBottom: '20px' } },
-              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, '✅ Asesor Autenticado'),
-              e('div', { style: { width: '100%', padding: '12px', border: '1px solid #4caf50', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f1f8f4', color: '#2e7d32', fontWeight: '600' } },
-                '👤 ' + (adminEmail ? adminEmail.split('@')[0] : 'Usuario')
+            e('div', { style: { background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px', padding: '16px', marginBottom: '28px' } },
+              e('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+                e('span', { style: { fontSize: '18px' } }, '✅'),
+                e('div', null,
+                  e('p', { style: { margin: '0 0 4px', fontSize: '12px', fontWeight: '600', color: '#6b7280' } }, 'AUTENTICADO'),
+                  e('p', { style: { margin: '0', fontSize: '14px', fontWeight: '600', color: '#16a34a' } }, adminEmail ? adminEmail.split('@')[0] : 'Usuario')
+                )
               )
             ),
-            e('div', { style: { marginBottom: '32px' } },
-              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, 'Nombre del Cliente'),
+            e('div', { style: { marginBottom: '28px' } },
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '10px' } }, 'Nombre del Cliente'),
               e('input', {
                 value: clientName,
                 onChange: (evt) => setClientName(evt.target.value),
-                placeholder: 'Nombre del cliente',
-                style: { width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
+                placeholder: 'Ingresa el nombre del cliente',
+                style: { width: '100%', padding: '12px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f9fafb' }
               })
-            )
-          ),
-
-        adminToken && e('button', {
-          onClick: () => { setAdvisorName(adminEmail.split('@')[0]); setStep('apertura'); },
-          disabled: !clientName.trim(),
-          style: { width: '100%', padding: '14px', background: clientName.trim() ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: clientName.trim() ? 'pointer' : 'not-allowed' }
-        }, 'Iniciar Sesión'),
-
-        adminToken && e('button', {
-          onClick: () => {
-            localStorage.removeItem('adminToken');
-            localStorage.removeItem('adminEmail');
-            localStorage.removeItem('adminRole');
-            setAdminToken(null);
-            setAdminEmail(null);
-            setAdminRole(null);
-            setClientName('');
-          },
-          style: { width: '100%', padding: '10px', background: '#999', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '12px', cursor: 'pointer', marginTop: '12px' }
-        }, 'Logout')
+            ),
+            e('button', {
+              onClick: () => { setAdvisorName(adminEmail.split('@')[0]); setStep('apertura'); },
+              disabled: !clientName.trim(),
+              style: { width: '100%', padding: '14px', background: clientName.trim() ? '#1f2937' : '#d1d5db', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '15px', cursor: clientName.trim() ? 'pointer' : 'not-allowed', transition: 'background 0.3s' }
+            }, 'Iniciar Sesión'),
+            e('button', {
+              onClick: () => {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('adminRole');
+                setAdminToken(null);
+                setAdminEmail(null);
+                setAdminRole(null);
+                setClientName('');
+              },
+              style: { width: '100%', padding: '12px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', marginTop: '12px', transition: 'background 0.3s' }
+            }, 'Cambiar cuenta')
+          )
       )
     );
   }
