@@ -538,12 +538,12 @@ function Dashboard() {
     }
   }, [step, sessionId]);
 
-  // Load admin catalog when entering admin mode
+  // Load admin catalog when entering admin projects screen
   React.useEffect(() => {
-    if (adminToken && adminSecret && adminCatalog.length === 0) {
+    if (step === 'admin_projects' && adminCatalog.length === 0) {
       loadAdminCatalog();
     }
-  }, [adminToken, adminSecret]);
+  }, [step]);
 
   // Load station 4 catalog when entering projects form
   React.useEffect(() => {
