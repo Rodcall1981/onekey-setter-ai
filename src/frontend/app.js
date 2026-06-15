@@ -308,9 +308,21 @@ function Dashboard() {
   const [consentGiven, setConsentGiven] = useState(false);
 
   // OAuth2 Admin Login
-  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || null);
-  const [adminEmail, setAdminEmail] = useState(localStorage.getItem('adminEmail') || null);
-  const [adminRole, setAdminRole] = useState(localStorage.getItem('adminRole') || null);
+  const [adminToken, setAdminToken] = useState(null);
+  const [adminEmail, setAdminEmail] = useState(null);
+  const [adminRole, setAdminRole] = useState(null);
+
+  // Sync with localStorage on mount
+  React.useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const email = localStorage.getItem('adminEmail');
+    const role = localStorage.getItem('adminRole');
+    if (token) {
+      setAdminToken(token);
+      setAdminEmail(email);
+      setAdminRole(role);
+    }
+  }, []);
 
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
@@ -2285,9 +2297,10 @@ function Dashboard() {
             style: {
               padding: '0',
               width: '100%',
-              minHeight: '40px',
+              minHeight: '44px',
               display: 'flex',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              alignItems: 'center'
             }
           }),
         e('button', {
