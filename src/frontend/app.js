@@ -1987,8 +1987,6 @@ function Dashboard() {
   }
 
   // ADMIN MODE: Catálogo de Proyectos (Solo cuando se accede explícitamente)
-  // NOTA: La pantalla antigua de admin con ADMIN_SECRET ha sido desactivada
-  // Pronto: Nueva pantalla de admin con gestión de proyectos
   if (step === 'admin_projects' && adminToken && adminRole === 'admin') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
@@ -1999,13 +1997,128 @@ function Dashboard() {
         }, 'Volver')
       ),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%' } },
-        e('div', { style: { background: '#fff', padding: '48px', borderRadius: '8px', textAlign: 'center' } },
-          e('h2', { style: { margin: '0 0 16px', fontSize: '24px', fontWeight: '700' } }, '📚 Catálogo de Proyectos'),
-          e('p', { style: { margin: '0 0 32px', fontSize: '14px', color: '#666' } }, 'En construcción... Aquí irán los proyectos 🚀'),
+        // Cargar nuevo proyecto
+        e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
+          e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, '➕ Cargar Proyecto al Catálogo'),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+            e('input', {
+              type: 'text',
+              placeholder: 'Nombre proyecto',
+              value: adminNewProject.project_name,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_name: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            }),
+            e('select', {
+              value: adminNewProject.project_state,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_state: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            },
+              e('option', null, 'Blanco'),
+              e('option', null, 'Verde'),
+              e('option', null, 'Entrega inmediata')
+            )
+          ),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+            e('input', {
+              type: 'text',
+              placeholder: 'Comuna',
+              value: adminNewProject.comuna,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, comuna: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            }),
+            e('input', {
+              type: 'text',
+              placeholder: 'Dirección',
+              value: adminNewProject.address,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, address: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          e('input', {
+            type: 'text',
+            placeholder: 'Google Maps link',
+            value: adminNewProject.gmaps_link,
+            onChange: (evt) => setAdminNewProject({ ...adminNewProject, gmaps_link: evt.target.value }),
+            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }
+          }),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' } },
+            e('input', {
+              type: 'number',
+              placeholder: 'Precio desde UF',
+              value: adminNewProject.price_from_uf,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, price_from_uf: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            }),
+            e('input', {
+              type: 'number',
+              placeholder: 'Arriendo zona UF',
+              value: adminNewProject.local_rent_uf,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, local_rent_uf: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            }),
+            e('input', {
+              type: 'number',
+              placeholder: 'Plusvalía %',
+              value: adminNewProject.appreciation_percent,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, appreciation_percent: evt.target.value }),
+              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          e('textarea', {
+            placeholder: 'Amenities (separadas por coma)',
+            value: adminNewProject.amenities,
+            onChange: (evt) => setAdminNewProject({ ...adminNewProject, amenities: evt.target.value }),
+            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+          }),
+
+          e('textarea', {
+            placeholder: 'Tipologías',
+            value: adminNewProject.typologies,
+            onChange: (evt) => setAdminNewProject({ ...adminNewProject, typologies: evt.target.value }),
+            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+          }),
+
+          e('textarea', {
+            placeholder: 'Descripción',
+            value: adminNewProject.description,
+            onChange: (evt) => setAdminNewProject({ ...adminNewProject, description: evt.target.value }),
+            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
+          }),
+
           e('button', {
-            onClick: () => setStep('apertura'),
-            style: { padding: '12px 24px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }
-          }, 'Volver a Estación 1')
+            onClick: handleAdminSaveProject,
+            style: { width: '100%', padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
+          }, '✅ Guardar Proyecto')
+        ),
+
+        error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', borderRadius: '6px', padding: '12px', marginBottom: '24px', color: '#c62828', fontSize: '13px' } }, error),
+
+        // Catálogo actual
+        e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
+          e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, `📚 Catálogo (${adminCatalog.length} proyectos)`),
+          adminCatalogLoading ? e('p', null, 'Cargando...') : (
+            e('div', { style: { display: 'grid', gap: '12px' } },
+              adminCatalog.length === 0 ? e('p', { style: { color: '#666', fontSize: '13px', textAlign: 'center', padding: '24px' } }, 'No hay proyectos aún') : (
+                ...adminCatalog.map(proj =>
+                  e('div', { style: { padding: '12px', background: '#f9f9f9', borderLeft: '3px solid #000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                    e('div', null,
+                      e('p', { style: { margin: '0 0 4px', fontWeight: '600', fontSize: '13px' } }, proj.project_name),
+                      e('p', { style: { margin: '0', fontSize: '12px', color: '#666' } }, proj.comuna + ' • ' + proj.project_state)
+                    ),
+                    e('button', {
+                      onClick: () => handleAdminDeleteProject(proj.id),
+                      style: { padding: '6px 12px', background: '#ef5350', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
+                    }, 'Eliminar')
+                  )
+                )
+              )
+            )
+          )
         )
       )
     );
