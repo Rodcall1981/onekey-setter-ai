@@ -4,6 +4,7 @@ const path = require('path');
 require('dotenv').config();
 
 const analysisRoutes = require('./routes/analysis');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,9 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 app.get('/health', (req, res) => {
   res.json({ status: 'Servidor OK ✅', timestamp: new Date().toISOString() });
 });
+
+// Rutas de autenticación
+app.use('/auth', authRoutes);
 
 // Rutas de análisis
 app.use('/api', analysisRoutes);
