@@ -1987,7 +1987,7 @@ function Dashboard() {
   }
 
   // ADMIN MODE: Catálogo de Proyectos
-  if (adminToken && !step.includes('admin')) {
+  if (adminToken && !step.includes('admin') && step !== 'setup') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
         e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 MODO ADMIN - Catálogo de Proyectos'),
