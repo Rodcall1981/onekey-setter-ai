@@ -312,6 +312,11 @@ function Dashboard() {
   const [adminEmail, setAdminEmail] = useState(null);
   const [adminRole, setAdminRole] = useState(null);
 
+  // Form expansion states for admin sidebar
+  const [formExpandedNewProject, setFormExpandedNewProject] = useState(false);
+  const [formExpandedInviteAdmin, setFormExpandedInviteAdmin] = useState(false);
+  const [inviteAdminForm, setInviteAdminForm] = useState({ email: '', nombre: '' });
+
   // Sync with localStorage on mount
   React.useEffect(() => {
     const token = localStorage.getItem('adminToken');
