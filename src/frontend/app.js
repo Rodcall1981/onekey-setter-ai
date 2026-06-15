@@ -427,15 +427,24 @@ function Dashboard() {
   React.useEffect(() => {
     if (window.google && !adminToken) {
       setTimeout(() => {
-        window.google.accounts.id.initialize({
-          client_id: '429236448293-mcdi7bibkk06cfm7ar0cqlfv4im0ldk3.apps.googleusercontent.com',
-          callback: handleGoogleSuccess
-        });
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          { theme: 'outline', size: 'large', width: '100%' }
-        );
-      }, 0);
+        try {
+          window.google.accounts.id.initialize({
+            client_id: '429236448293-mcdi7bibkk06cfm7ar0cqlfv4im0ldk3.apps.googleusercontent.com',
+            callback: handleGoogleSuccess
+          });
+          const container = document.getElementById('google-signin-button');
+          if (container) {
+            window.google.accounts.id.renderButton(container, {
+              theme: 'outline',
+              size: 'large'
+            });
+          } else {
+            console.warn('google-signin-button container not found');
+          }
+        } catch (err) {
+          console.error('Google Sign-In init error:', err);
+        }
+      }, 100);
     }
   }, [adminToken]);
 
@@ -2273,7 +2282,13 @@ function Dashboard() {
         :
           e('div', {
             id: 'google-signin-button',
-            style: { padding: '0' }
+            style: {
+              padding: '0',
+              width: '100%',
+              minHeight: '40px',
+              display: 'flex',
+              justifyContent: 'center'
+            }
           }),
         e('button', {
           onClick: saveSessionAndProceed,
