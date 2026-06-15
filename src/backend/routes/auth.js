@@ -186,4 +186,4 @@ router.post('/invite', verifyJWT, async (req, res) => {
 });
 
 module.exports = router;
-module.exports.verifyJWT = verifyJWT;
+router.verifyJWT = verifyJWT;

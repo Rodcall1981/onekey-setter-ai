@@ -3,7 +3,8 @@ const router = express.Router();
 const { analyzeConversation } = require('../services/claudeService');
 const { saveAnalysis, saveSession, registerEvent, saveDiscovery } = require('../services/supabaseService');
 const { validateCompleteness } = require('../services/geminiService');
-const { verifyJWT } = require('./auth');
+const authRouter = require('./auth');
+const verifyJWT = authRouter.verifyJWT;
 
 router.post('/analyze', async (req, res) => {
   try {
