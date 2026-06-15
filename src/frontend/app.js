@@ -1987,7 +1987,31 @@ function Dashboard() {
   }
 
   // ADMIN MODE: Catálogo de Proyectos (Solo cuando se accede explícitamente)
-  if (step.includes('admin') && adminToken) {
+  // NOTA: La pantalla antigua de admin con ADMIN_SECRET ha sido desactivada
+  // Pronto: Nueva pantalla de admin con gestión de proyectos
+  if (step === 'admin_projects' && adminToken && adminRole === 'admin') {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
+      e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+        e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 CATÁLOGO DE PROYECTOS'),
+        e('button', {
+          onClick: () => setStep('apertura'),
+          style: { padding: '6px 12px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
+        }, 'Volver')
+      ),
+      e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%' } },
+        e('div', { style: { background: '#fff', padding: '48px', borderRadius: '8px', textAlign: 'center' } },
+          e('h2', { style: { margin: '0 0 16px', fontSize: '24px', fontWeight: '700' } }, '📚 Catálogo de Proyectos'),
+          e('p', { style: { margin: '0 0 32px', fontSize: '14px', color: '#666' } }, 'En construcción... Aquí irán los proyectos 🚀'),
+          e('button', {
+            onClick: () => setStep('apertura'),
+            style: { padding: '12px 24px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }
+          }, 'Volver a Estación 1')
+        )
+      )
+    );
+  }
+
+  if (false && step.includes('admin') && adminToken) {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
         e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 MODO ADMIN - Catálogo de Proyectos'),
