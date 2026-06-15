@@ -2203,8 +2203,12 @@ function Dashboard() {
       e(Header, { step: 'apertura', advisorName, clientName, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '48px 32px', width: '100%' } },
         // Banner de estado
-        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
-          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 1: APERTURA')
+        e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+          e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 1: APERTURA'),
+          adminRole === 'admin' && e('button', {
+            onClick: () => setStep('admin_projects'),
+            style: { padding: '6px 12px', background: '#fff', color: '#383838', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+          }, '🔐 Catálogo de Proyectos')
         ),
 
         // Sesiones recientes
