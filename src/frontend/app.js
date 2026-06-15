@@ -444,23 +444,36 @@ function Dashboard() {
             client_id: '429236448293-mcdi7bibkk06cfm7ar0cqlfv4im0ldk3.apps.googleusercontent.com',
             callback: handleGoogleSuccess
           });
-          const container = document.getElementById('google-signin-button');
+
+          // Try setup container first (pantalla de login)
+          let container = document.getElementById('google-signin-button-setup');
           if (container) {
             window.google.accounts.id.renderButton(container, {
               theme: 'outline',
-              size: 'large',
-              width: '100%'
+              size: 'large'
             });
-            console.log('✅ Google Sign-In button rendered successfully');
-          } else {
-            console.warn('❌ google-signin-button container not found');
+            console.log('✅ Google Sign-In button rendered in setup');
+            return;
           }
+
+          // Try apertura container (station 1)
+          container = document.getElementById('google-signin-button');
+          if (container) {
+            window.google.accounts.id.renderButton(container, {
+              theme: 'outline',
+              size: 'large'
+            });
+            console.log('✅ Google Sign-In button rendered in apertura');
+            return;
+          }
+
+          console.warn('❌ No Google Sign-In container found');
         } catch (err) {
           console.error('❌ Google Sign-In init error:', err);
         }
       }, 500);
     }
-  }, [adminToken]);
+  }, [adminToken, step]);
 
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
@@ -1914,29 +1927,61 @@ function Dashboard() {
           e('h1', { style: { margin: '0 0 8px', fontSize: '28px', fontWeight: '700', color: '#000' } }, 'OneKey Setter'),
           e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Estación 1: Apertura')
         ),
-        e('div', { style: { marginBottom: '20px' } },
-          e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, 'Nombre del Asesor'),
-          e('input', {
-            value: advisorName,
-            onChange: (evt) => setAdvisorName(evt.target.value),
-            placeholder: 'Tu nombre',
-            style: { width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
-          })
-        ),
-        e('div', { style: { marginBottom: '32px' } },
-          e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, 'Nombre del Cliente'),
-          e('input', {
-            value: clientName,
-            onChange: (evt) => setClientName(evt.target.value),
-            placeholder: 'Nombre del cliente',
-            style: { width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
-          })
-        ),
-        e('button', {
-          onClick: () => setStep('apertura'),
-          disabled: !advisorName.trim() || !clientName.trim(),
-          style: { width: '100%', padding: '14px', background: (advisorName.trim() && clientName.trim()) ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: (advisorName.trim() && clientName.trim()) ? 'pointer' : 'not-allowed' }
-        }, 'Iniciar Sesión')
+
+        !adminToken ?
+          // No autenticado: Mostrar botón de Google
+          e('div', null,
+            e('p', { style: { margin: '0 0 16px', fontSize: '13px', fontWeight: '600', color: '#333' } }, '👤 Primero, inicia sesión con Google:'),
+            e('div', {
+              id: 'google-signin-button-setup',
+              style: {
+                width: '100%',
+                minHeight: '50px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: '24px'
+              }
+            })
+          )
+        :
+          // Autenticado: Mostrar nombre del asesor y pedir cliente
+          e('div', null,
+            e('div', { style: { marginBottom: '20px' } },
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, '✅ Asesor Autenticado'),
+              e('div', { style: { width: '100%', padding: '12px', border: '1px solid #4caf50', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f1f8f4', color: '#2e7d32', fontWeight: '600' } },
+                '👤 ' + (adminEmail ? adminEmail.split('@')[0] : 'Usuario')
+              )
+            ),
+            e('div', { style: { marginBottom: '32px' } },
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#333', marginBottom: '8px' } }, 'Nombre del Cliente'),
+              e('input', {
+                value: clientName,
+                onChange: (evt) => setClientName(evt.target.value),
+                placeholder: 'Nombre del cliente',
+                style: { width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff' }
+              })
+            )
+          ),
+
+        adminToken && e('button', {
+          onClick: () => { setAdvisorName(adminEmail.split('@')[0]); setStep('apertura'); },
+          disabled: !clientName.trim(),
+          style: { width: '100%', padding: '14px', background: clientName.trim() ? '#000' : '#ccc', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: clientName.trim() ? 'pointer' : 'not-allowed' }
+        }, 'Iniciar Sesión'),
+
+        adminToken && e('button', {
+          onClick: () => {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminEmail');
+            localStorage.removeItem('adminRole');
+            setAdminToken(null);
+            setAdminEmail(null);
+            setAdminRole(null);
+            setClientName('');
+          },
+          style: { width: '100%', padding: '10px', background: '#999', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '12px', cursor: 'pointer', marginTop: '12px' }
+        }, 'Logout')
       )
     );
   }
@@ -2275,36 +2320,6 @@ function Dashboard() {
           onClick: () => setStep('setup'),
           style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
         }, 'Volver'),
-        adminToken ?
-          e('div', {
-            id: 'logout-button',
-            style: { padding: '14px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }
-          },
-            e('span', null, '👤 ' + (adminEmail ? adminEmail.split('@')[0] : 'Admin')),
-            e('button', {
-              onClick: () => {
-                localStorage.removeItem('adminToken');
-                localStorage.removeItem('adminEmail');
-                localStorage.removeItem('adminRole');
-                setAdminToken(null);
-                setAdminEmail(null);
-                setAdminRole(null);
-              },
-              style: { padding: '4px 8px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }
-            }, 'Logout')
-          )
-        :
-          e('div', {
-            id: 'google-signin-button',
-            style: {
-              padding: '0',
-              width: '100%',
-              minHeight: '44px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }
-          }),
         e('button', {
           onClick: saveSessionAndProceed,
           disabled: !canProceed || loading,
