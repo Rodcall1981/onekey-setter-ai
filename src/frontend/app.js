@@ -1925,13 +1925,13 @@ function Dashboard() {
         // Header
         e('div', { style: { textAlign: 'center', marginBottom: '40px' } },
           e('div', { style: { fontSize: '32px', fontWeight: '300', letterSpacing: '2px', color: '#1f2937', marginBottom: '12px' } }, 'onekey'),
-          e('h1', { style: { margin: '0 0 12px', fontSize: '32px', fontWeight: '700', color: '#000' } }, 'Cotizador OneKey'),
+          e('h1', { style: { margin: '0 0 12px', fontSize: '32px', fontWeight: '700', color: '#000' } }, 'Sistema calificación clientes'),
           e('p', { style: { margin: '0', fontSize: '15px', color: '#6b7280', lineHeight: '1.5' } }, 'Acceso exclusivo equipo OneKey (correos @onekeybroker.com o @lupchile.com).')
         ),
 
         !adminToken ?
           // No autenticado: Mostrar botón de Google
-          e('div', null,
+          e('div', { style: { display: 'flex', justifyContent: 'center' } },
             e('div', {
               id: 'google-signin-button-setup',
               style: {
@@ -1939,20 +1939,9 @@ function Dashboard() {
                 minHeight: '56px',
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: '24px'
+                alignItems: 'center'
               }
-            }),
-            e('div', { style: { textAlign: 'center', marginBottom: '24px' } },
-              e('p', { style: { margin: '0', fontSize: '14px', color: '#9ca3af' } }, 'o con tu correo')
-            ),
-            e('input', {
-              placeholder: 'tunombre@onekeybroker.com',
-              style: { width: '100%', padding: '14px 16px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#f9fafb', color: '#6b7280' }
-            }),
-            e('button', {
-              style: { width: '100%', padding: '14px', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '15px', cursor: 'pointer', marginTop: '24px', transition: 'background 0.3s' }
-            }, 'Enviarme el enlace de acceso')
+            })
           )
         :
           // Autenticado: Mostrar nombre y pedir cliente
