@@ -448,15 +448,17 @@ function Dashboard() {
           if (container) {
             window.google.accounts.id.renderButton(container, {
               theme: 'outline',
-              size: 'large'
+              size: 'large',
+              width: '100%'
             });
+            console.log('✅ Google Sign-In button rendered successfully');
           } else {
-            console.warn('google-signin-button container not found');
+            console.warn('❌ google-signin-button container not found');
           }
         } catch (err) {
-          console.error('Google Sign-In init error:', err);
+          console.error('❌ Google Sign-In init error:', err);
         }
-      }, 100);
+      }, 500);
     }
   }, [adminToken]);
 
