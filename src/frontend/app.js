@@ -2100,137 +2100,212 @@ function Dashboard() {
     );
   }
 
-  // ADMIN MODE: Catálogo de Proyectos (Solo cuando se accede explícitamente)
   if (step === 'admin_projects' && adminToken && adminRole === 'admin') {
-    return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
-      e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-        e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 CATÁLOGO DE PROYECTOS'),
-        e('button', {
-          onClick: () => setStep('apertura'),
-          style: { padding: '6px 12px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
-        }, 'Volver')
-      ),
-      e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '24px', width: '100%' } },
-        // Cargar nuevo proyecto
-        e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
-          e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, '➕ Cargar Proyecto al Catálogo'),
+    return e('div', { style: { display: 'flex', minHeight: '100vh', background: '#f3f4f6' } },
+      // SIDEBAR
+      e('div', { style: { width: '280px', background: '#1f2937', color: '#fff', padding: '20px', overflowY: 'auto', flexShrink: 0 } },
+        e('div', { style: { fontSize: '24px', fontWeight: '300', letterSpacing: '2px', marginBottom: '20px' } }, 'onekey'),
+        e('div', { style: { fontSize: '12px', fontWeight: '600', color: '#9ca3af', marginBottom: '20px' } }, 'CATÁLOGO'),
 
-          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+        // NUEVO PROYECTO BUTTON
+        e('button', {
+          onClick: () => {
+            setFormExpandedNewProject(!formExpandedNewProject);
+            setFormExpandedInviteAdmin(false);
+            if (!formExpandedNewProject) {
+              setAdminNewProject({ project_name: '', project_state: '', comuna: '', address: '', gmaps_link: '', amenities: '', typologies: '', price_from_uf: '', local_rent_uf: '', appreciation_percent: '', description: '', image_urls: [] });
+            }
+          },
+          style: { width: '100%', padding: '12px', background: formExpandedNewProject ? '#10b981' : '#374151', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginBottom: '16px', transition: 'background 0.3s' }
+        }, '+ Nuevo Proyecto'),
+
+        // NUEVO PROYECTO FORM
+        formExpandedNewProject && e('div', { style: { background: '#374151', padding: '16px', borderRadius: '8px', marginBottom: '16px' } },
+          e('div', { style: { marginBottom: '12px' } },
+            e('label', { style: { display: 'block', fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '6px' } }, 'NOMBRE'),
             e('input', {
-              type: 'text',
-              placeholder: 'Nombre proyecto',
               value: adminNewProject.project_name,
               onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_name: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
-            }),
+              placeholder: 'Nombre del proyecto',
+              style: { width: '100%', padding: '8px', border: '1px solid #4b5563', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#2d3748', color: '#fff' }
+            })
+          ),
+          e('div', { style: { marginBottom: '12px' } },
+            e('label', { style: { display: 'block', fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '6px' } }, 'ESTADO'),
             e('select', {
               value: adminNewProject.project_state,
               onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_state: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+              style: { width: '100%', padding: '8px', border: '1px solid #4b5563', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#2d3748', color: '#fff' }
             },
-              e('option', null, 'Blanco'),
-              e('option', null, 'Verde'),
-              e('option', null, 'Entrega inmediata')
+              e('option', { value: '' }, 'Selecciona...'),
+              e('option', { value: 'Blanco' }, 'Blanco'),
+              e('option', { value: 'Verde' }, 'Verde'),
+              e('option', { value: 'Entrega inmediata' }, 'Entrega inmediata')
             )
           ),
-
-          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' } },
+          e('div', { style: { marginBottom: '12px' } },
+            e('label', { style: { display: 'block', fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '6px' } }, 'COMUNA'),
             e('input', {
-              type: 'text',
-              placeholder: 'Comuna',
               value: adminNewProject.comuna,
               onChange: (evt) => setAdminNewProject({ ...adminNewProject, comuna: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
-            }),
-            e('input', {
-              type: 'text',
-              placeholder: 'Dirección',
-              value: adminNewProject.address,
-              onChange: (evt) => setAdminNewProject({ ...adminNewProject, address: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
+              placeholder: 'Comuna',
+              style: { width: '100%', padding: '8px', border: '1px solid #4b5563', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#2d3748', color: '#fff' }
             })
           ),
-
-          e('input', {
-            type: 'text',
-            placeholder: 'Google Maps link',
-            value: adminNewProject.gmaps_link,
-            onChange: (evt) => setAdminNewProject({ ...adminNewProject, gmaps_link: evt.target.value }),
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', boxSizing: 'border-box' }
-          }),
-
-          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' } },
-            e('input', {
-              type: 'number',
-              placeholder: 'Precio desde UF',
-              value: adminNewProject.price_from_uf,
-              onChange: (evt) => setAdminNewProject({ ...adminNewProject, price_from_uf: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
-            }),
-            e('input', {
-              type: 'number',
-              placeholder: 'Arriendo zona UF',
-              value: adminNewProject.local_rent_uf,
-              onChange: (evt) => setAdminNewProject({ ...adminNewProject, local_rent_uf: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
-            }),
-            e('input', {
-              type: 'number',
-              placeholder: 'Plusvalía %',
-              value: adminNewProject.appreciation_percent,
-              onChange: (evt) => setAdminNewProject({ ...adminNewProject, appreciation_percent: evt.target.value }),
-              style: { padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', boxSizing: 'border-box' }
-            })
-          ),
-
-          e('textarea', {
-            placeholder: 'Amenities (separadas por coma)',
-            value: adminNewProject.amenities,
-            onChange: (evt) => setAdminNewProject({ ...adminNewProject, amenities: evt.target.value }),
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
-          }),
-
-          e('textarea', {
-            placeholder: 'Tipologías',
-            value: adminNewProject.typologies,
-            onChange: (evt) => setAdminNewProject({ ...adminNewProject, typologies: evt.target.value }),
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
-          }),
-
-          e('textarea', {
-            placeholder: 'Descripción',
-            value: adminNewProject.description,
-            onChange: (evt) => setAdminNewProject({ ...adminNewProject, description: evt.target.value }),
-            style: { width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px', fontSize: '13px', marginBottom: '12px', minHeight: '60px', boxSizing: 'border-box' }
-          }),
-
-          e('button', {
-            onClick: handleAdminSaveProject,
-            style: { width: '100%', padding: '12px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-          }, '✅ Guardar Proyecto')
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' } },
+            e('button', {
+              onClick: () => {
+                setFormExpandedNewProject(false);
+                setAdminNewProject({ project_name: '', project_state: '', comuna: '', address: '', gmaps_link: '', amenities: '', typologies: '', price_from_uf: '', local_rent_uf: '', appreciation_percent: '', description: '', image_urls: [] });
+              },
+              style: { padding: '8px', background: '#4b5563', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Cancelar'),
+            e('button', {
+              onClick: handleAdminSaveProject,
+              style: { padding: '8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Guardar')
+          )
         ),
 
-        error && e('div', { style: { background: '#ffebee', border: '1px solid #ef5350', borderRadius: '6px', padding: '12px', marginBottom: '24px', color: '#c62828', fontSize: '13px' } }, error),
+        // INVITAR ADMIN BUTTON
+        e('button', {
+          onClick: () => {
+            setFormExpandedInviteAdmin(!formExpandedInviteAdmin);
+            setFormExpandedNewProject(false);
+            if (!formExpandedInviteAdmin) {
+              setInviteAdminForm({ email: '', nombre: '' });
+            }
+          },
+          style: { width: '100%', padding: '12px', background: formExpandedInviteAdmin ? '#10b981' : '#374151', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', marginBottom: '16px', transition: 'background 0.3s' }
+        }, '👤 Invitar Admin'),
 
-        // Catálogo actual
-        e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
-          e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, `📚 Catálogo (${adminCatalog.length} proyectos)`),
-          adminCatalogLoading ? e('p', null, 'Cargando...') :
-            e('div', { style: { display: 'grid', gap: '12px' } },
-              adminCatalog.length === 0 ?
-                e('p', { style: { color: '#666', fontSize: '13px', textAlign: 'center', padding: '24px' } }, 'No hay proyectos aún') :
-                adminCatalog.map(proj =>
-                  e('div', { style: { padding: '12px', background: '#f9f9f9', borderLeft: '3px solid #000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-                    e('div', null,
-                      e('p', { style: { margin: '0 0 4px', fontWeight: '600', fontSize: '13px' } }, proj.project_name),
-                      e('p', { style: { margin: '0', fontSize: '12px', color: '#666' } }, proj.comuna + ' • ' + proj.project_state)
+        // INVITAR ADMIN FORM
+        formExpandedInviteAdmin && e('div', { style: { background: '#374151', padding: '16px', borderRadius: '8px', marginBottom: '16px' } },
+          e('div', { style: { marginBottom: '12px' } },
+            e('label', { style: { display: 'block', fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '6px' } }, 'EMAIL'),
+            e('input', {
+              value: inviteAdminForm.email,
+              onChange: (evt) => setInviteAdminForm({ ...inviteAdminForm, email: evt.target.value }),
+              placeholder: 'admin@onekeybroker.com',
+              style: { width: '100%', padding: '8px', border: '1px solid #4b5563', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#2d3748', color: '#fff' }
+            })
+          ),
+          e('div', { style: { marginBottom: '12px' } },
+            e('label', { style: { display: 'block', fontSize: '11px', fontWeight: '600', color: '#9ca3af', marginBottom: '6px' } }, 'NOMBRE'),
+            e('input', {
+              value: inviteAdminForm.nombre,
+              onChange: (evt) => setInviteAdminForm({ ...inviteAdminForm, nombre: evt.target.value }),
+              placeholder: 'Nombre completo',
+              style: { width: '100%', padding: '8px', border: '1px solid #4b5563', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#2d3748', color: '#fff' }
+            })
+          ),
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' } },
+            e('button', {
+              onClick: () => {
+                setFormExpandedInviteAdmin(false);
+                setInviteAdminForm({ email: '', nombre: '' });
+              },
+              style: { padding: '8px', background: '#4b5563', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Cancelar'),
+            e('button', {
+              onClick: handleInviteAdmin,
+              style: { padding: '8px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+            }, 'Enviar')
+          )
+        ),
+
+        // DIVIDER
+        e('div', { style: { borderTop: '1px solid #374151', margin: '16px 0' } }),
+
+        // STATS
+        e('div', { style: { fontSize: '11px', fontWeight: '600', color: '#6b7280', marginBottom: '12px' } }, 'ESTADÍSTICAS'),
+        e('div', { style: { background: '#374151', padding: '12px', borderRadius: '6px', marginBottom: '24px' } },
+          e('div', { style: { fontSize: '12px', color: '#9ca3af', marginBottom: '6px' } }, 'Proyectos: ', e('span', { style: { fontWeight: '600', color: '#fff' } }, adminCatalog.length)),
+          e('div', { style: { fontSize: '12px', color: '#9ca3af', marginBottom: '6px' } }, 'Última actualización: ', e('span', { style: { fontWeight: '600', color: '#fff' } }, 'Hoy')),
+          e('div', { style: { fontSize: '12px', color: '#9ca3af' } }, 'Admins: ', e('span', { style: { fontWeight: '600', color: '#fff' } }, '3'))
+        ),
+
+        // VOLVER BUTTON
+        e('button', {
+          onClick: () => setStep('apertura'),
+          style: { width: '100%', padding: '12px', background: '#666', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', marginTop: 'auto' }
+        }, '← Volver')
+      ),
+
+      // MAIN CONTENT
+      e('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' } },
+        // HEADER
+        e('div', { style: { background: '#fff', padding: '20px', borderBottom: '1px solid #e5e7eb' } },
+          e('h1', { style: { margin: 0, fontSize: '18px', fontWeight: '700', color: '#1f2937' } }, 'Catálogo de Proyectos')
+        ),
+
+        // CARDS GRID
+        e('div', { style: { flex: 1, overflow: 'auto', padding: '24px' } },
+          adminCatalog.length === 0 ?
+            e('div', { style: { textAlign: 'center', color: '#6b7280', paddingTop: '60px' } },
+              e('p', { style: { fontSize: '16px', fontWeight: '600', marginBottom: '8px' } }, 'No hay proyectos aún'),
+              e('p', { style: { fontSize: '14px' } }, 'Crea el primero con el botón "Nuevo Proyecto" en el sidebar')
+            )
+          :
+            e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' } },
+              adminCatalog.map(project => {
+                const stateColor = project.project_state === 'Blanco' ? '#dbeafe' :
+                                   project.project_state === 'Verde' ? '#dcfce7' : '#fef3c7';
+                const stateTextColor = project.project_state === 'Blanco' ? '#0369a1' :
+                                       project.project_state === 'Verde' ? '#15803d' : '#d97706';
+                const imageUrl = project.image_urls && project.image_urls.length > 0 ? project.image_urls[0] : null;
+
+                return e('div', { key: project.id, style: { background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column' } },
+                  // Image
+                  imageUrl ?
+                    e('img', { src: imageUrl, style: { width: '100%', height: '160px', objectFit: 'cover' } })
+                  :
+                    e('div', { style: { width: '100%', height: '160px', background: 'linear-gradient(135deg, #64748b 0%, #334155 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+                      e('span', { style: { fontSize: '14px', fontWeight: '600', color: '#fff', opacity: 0.8 } }, project.project_name)
                     ),
-                    e('button', {
-                      onClick: () => handleAdminDeleteProject(proj.id),
-                      style: { padding: '6px 12px', background: '#ef5350', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }
-                    }, 'Eliminar')
+
+                  // Content
+                  e('div', { style: { padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' } },
+                    e('h3', { style: { margin: '0 0 4px', fontSize: '14px', fontWeight: '600', color: '#1f2937' } }, project.project_name),
+                    e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#6b7280' } }, `${project.comuna} • ${project.project_state}`),
+
+                    e('div', { style: { borderTop: '1px solid #e5e7eb', paddingTop: '12px', marginBottom: '12px' } }),
+
+                    // Price & State
+                    e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' } },
+                      e('div', null,
+                        e('p', { style: { margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#6b7280' } }, 'PRECIO'),
+                        e('p', { style: { margin: 0, fontSize: '16px', fontWeight: '700', color: '#1f2937' } }, `${project.price_from_uf || '—'} UF`)
+                      ),
+                      e('div', null,
+                        e('p', { style: { margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#6b7280' } }, 'ESTADO'),
+                        e('div', { style: { background: stateColor, color: stateTextColor, padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', display: 'inline-block' } }, project.project_state)
+                      )
+                    ),
+
+                    // Amenities
+                    e('div', { style: { marginBottom: '12px' } },
+                      e('p', { style: { margin: '0 0 4px', fontSize: '11px', fontWeight: '600', color: '#6b7280' } }, 'AMENITIES'),
+                      e('p', { style: { margin: 0, fontSize: '11px', color: '#4b5563' } },
+                        project.amenities ?
+                          project.amenities.split(',').slice(0, 3).map(a => `• ${a.trim()}`).join(' ')
+                        : 'Sin amenities'
+                      )
+                    ),
+
+                    e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 'auto' } },
+                      e('button', {
+                        onClick: () => handleEditProject(project.id),
+                        style: { padding: '8px', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+                      }, 'Editar'),
+                      e('button', {
+                        onClick: () => handleAdminDeleteProject(project.id),
+                        style: { padding: '8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
+                      }, 'Eliminar')
+                    )
                   )
-                )
+                );
+              })
             )
         )
       )
