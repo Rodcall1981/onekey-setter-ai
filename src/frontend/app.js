@@ -423,6 +423,22 @@ function Dashboard() {
     }
   };
 
+  // Initialize Google Sign-In
+  React.useEffect(() => {
+    if (window.google && !adminToken) {
+      setTimeout(() => {
+        window.google.accounts.id.initialize({
+          client_id: '429236448293-mcdi7bibkk06cfm7ar0cqlfv4im0ldk3.apps.googleusercontent.com',
+          callback: handleGoogleSuccess
+        });
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-button'),
+          { theme: 'outline', size: 'large', width: '100%' }
+        );
+      }, 0);
+    }
+  }, [adminToken]);
+
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
   const [expandedQuestion, setExpandedQuestion] = useState(0);
@@ -447,7 +463,6 @@ function Dashboard() {
   const [closingSaving, setClosingSaving] = useState(false);
 
   // Admin Mode
-  const [adminMode, setAdminMode] = useState(false);
   const [adminSecret, setAdminSecret] = useState('');
   const [adminCatalog, setAdminCatalog] = useState([]);
   const [adminCatalogLoading, setAdminCatalogLoading] = useState(false);
@@ -489,10 +504,10 @@ function Dashboard() {
 
   // Load admin catalog when entering admin mode
   React.useEffect(() => {
-    if (adminMode && adminSecret && adminCatalog.length === 0) {
+    if (adminToken && adminSecret && adminCatalog.length === 0) {
       loadAdminCatalog();
     }
-  }, [adminMode, adminSecret]);
+  }, [adminToken, adminSecret]);
 
   // Load station 4 catalog when entering projects form
   React.useEffect(() => {
@@ -1904,12 +1919,20 @@ function Dashboard() {
   }
 
   // ADMIN MODE: Catálogo de Proyectos
-  if (adminMode && !step.includes('admin')) {
+  if (adminToken && !step.includes('admin')) {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f5f5' } },
       e('div', { style: { background: '#000', color: '#fff', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
         e('p', { style: { margin: 0, fontSize: '14px', fontWeight: '600' } }, '🔐 MODO ADMIN - Catálogo de Proyectos'),
         e('button', {
-          onClick: () => { setAdminMode(false); setAdminSecret(''); },
+          onClick: () => {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminEmail');
+            localStorage.removeItem('adminRole');
+            setAdminToken(null);
+            setAdminEmail(null);
+            setAdminRole(null);
+            setAdminSecret('');
+          },
           style: { padding: '6px 12px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }
         }, 'Salir')
       ),
@@ -2229,10 +2252,29 @@ function Dashboard() {
           onClick: () => setStep('setup'),
           style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
         }, 'Volver'),
-        e('button', {
-          onClick: () => setAdminMode(true),
-          style: { padding: '14px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px' }
-        }, '🔐'),
+        adminToken ?
+          e('div', {
+            id: 'logout-button',
+            style: { padding: '14px 20px', background: '#333', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }
+          },
+            e('span', null, '👤 ' + (adminEmail ? adminEmail.split('@')[0] : 'Admin')),
+            e('button', {
+              onClick: () => {
+                localStorage.removeItem('adminToken');
+                localStorage.removeItem('adminEmail');
+                localStorage.removeItem('adminRole');
+                setAdminToken(null);
+                setAdminEmail(null);
+                setAdminRole(null);
+              },
+              style: { padding: '4px 8px', background: '#666', border: 'none', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontSize: '12px', fontWeight: '500' }
+            }, 'Logout')
+          )
+        :
+          e('div', {
+            id: 'google-signin-button',
+            style: { padding: '0' }
+          }),
         e('button', {
           onClick: saveSessionAndProceed,
           disabled: !canProceed || loading,
