@@ -307,6 +307,11 @@ function Dashboard() {
   const [reunionMode, setReunionMode] = useState('2_reuniones');
   const [consentGiven, setConsentGiven] = useState(false);
 
+  // OAuth2 Admin Login
+  const [adminToken, setAdminToken] = useState(localStorage.getItem('adminToken') || null);
+  const [adminEmail, setAdminEmail] = useState(localStorage.getItem('adminEmail') || null);
+  const [adminRole, setAdminRole] = useState(localStorage.getItem('adminRole') || null);
+
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState({
     p0: { intention: [], notes: '' },
@@ -367,6 +372,56 @@ function Dashboard() {
         .finally(() => setLoadingSessions(false));
     }
   }, [advisorName, step]);
+
+  // Verify JWT token on page load
+  React.useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      fetch('/auth/verify-token', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.valid) {
+          setAdminEmail(data.email);
+          setAdminRole(data.role);
+        } else {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminEmail');
+          localStorage.removeItem('adminRole');
+          setAdminToken(null);
+          setAdminEmail(null);
+          setAdminRole(null);
+        }
+      })
+      .catch(err => console.error('Token verification error:', err));
+    }
+  }, []);
+
+  // Handle Google OAuth callback
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const response = await fetch('/auth/google/callback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: credentialResponse.credential })
+      });
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('adminToken', data.jwt);
+        localStorage.setItem('adminEmail', data.email);
+        localStorage.setItem('adminRole', data.role);
+        setAdminToken(data.jwt);
+        setAdminEmail(data.email);
+        setAdminRole(data.role);
+      } else {
+        alert('Error: ' + (data.message || data.error));
+      }
+    } catch (err) {
+      console.error('OAuth error:', err);
+      alert('Authentication failed');
+    }
+  };
 
   // Old questions (fallback)
   const [questions, setQuestions] = useState(QUESTIONS);
