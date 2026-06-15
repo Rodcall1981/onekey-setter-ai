@@ -108,7 +108,12 @@
       "Bash(git commit -m 'ui: add back button to Station 5 objeciones *)",
       "Bash(git commit -m 'ui: add back button to Station 6 cierre *)",
       "Bash(git commit -m 'ui: remove '\\\\''Objeción'\\\\'' label from button, keep only symbol *)",
-      "Bash(git commit -m 'ui: add back button to Station 4 Part B *)"
+      "Bash(git commit -m 'ui: add back button to Station 4 Part B *)",
+      "Bash(curl http://localhost:3001/health)",
+      "Bash(curl -X POST http://localhost:3001/auth/google/callback -H \"Content-Type: application/json\" -d '{\"credential\":\"test\"}')",
+      "Bash(xargs ps -p)",
+      "Bash(pkill -f \"node src/backend\")",
+      "Bash(git commit *)"
     ]
   }
 }

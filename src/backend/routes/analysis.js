@@ -3,6 +3,7 @@ const router = express.Router();
 const { analyzeConversation } = require('../services/claudeService');
 const { saveAnalysis, saveSession, registerEvent, saveDiscovery } = require('../services/supabaseService');
 const { validateCompleteness } = require('../services/geminiService');
+const { verifyJWT } = require('./auth');
 
 router.post('/analyze', async (req, res) => {
   try {
@@ -1131,8 +1132,8 @@ router.get('/admin/catalog', async (req, res) => {
   }
 });
 
-// POST /api/admin/catalog - crear proyecto en catálogo (requiere ADMIN_SECRET)
-router.post('/admin/catalog', validateAdminSecret, async (req, res) => {
+// POST /api/admin/catalog - crear proyecto en catálogo (requiere JWT)
+router.post('/admin/catalog', verifyJWT, async (req, res) => {
   try {
     const {
       project_name,
@@ -1206,7 +1207,7 @@ router.post('/admin/catalog', validateAdminSecret, async (req, res) => {
 });
 
 // PUT /api/admin/catalog/:projectId - editar proyecto en catálogo
-router.put('/admin/catalog/:projectId', validateAdminSecret, async (req, res) => {
+router.put('/admin/catalog/:projectId', verifyJWT, async (req, res) => {
   try {
     const { projectId } = req.params;
     const updateData = req.body;
@@ -1252,8 +1253,8 @@ router.put('/admin/catalog/:projectId', validateAdminSecret, async (req, res) =>
   }
 });
 
-// DELETE /api/admin/catalog/:projectId - eliminar proyecto (desactivar)
-router.delete('/admin/catalog/:projectId', validateAdminSecret, async (req, res) => {
+// DELETE /api/admin/catalog/:projectId - eliminar proyecto
+router.delete('/admin/catalog/:projectId', verifyJWT, async (req, res) => {
   try {
     const { projectId } = req.params;
 

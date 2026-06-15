@@ -1037,8 +1037,8 @@ function Dashboard() {
       return;
     }
 
-    if (!adminSecret.trim()) {
-      setError('Ingresa el ADMIN_SECRET para continuar');
+    if (!adminToken) {
+      setError('Debes estar autenticado para guardar proyectos');
       return;
     }
 
@@ -1050,7 +1050,7 @@ function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Admin-Secret': adminSecret
+          'Authorization': `Bearer ${adminToken}`
         },
         body: JSON.stringify(adminNewProject)
       });
@@ -1134,7 +1134,7 @@ function Dashboard() {
       const resp = await fetch(`/api/admin/catalog/${projectId}`, {
         method: 'DELETE',
         headers: {
-          'X-Admin-Secret': adminSecret
+          'Authorization': `Bearer ${adminToken}`
         }
       });
 
