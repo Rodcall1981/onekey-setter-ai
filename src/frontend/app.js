@@ -1200,6 +1200,70 @@ function Dashboard() {
     }
   };
 
+  // ADMIN: Ir a pantalla de edición
+  const handleEditProject = (projectId) => {
+    setStep('admin_edit_project');
+    // Store the project ID in a ref or state for the edit screen to access
+    window.editingProjectId = projectId;
+  };
+
+  // ADMIN: Guardar cambios en proyecto
+  const handleUpdateProject = async () => {
+    const projectId = window.editingProjectId;
+
+    if (!projectId) {
+      setError('No project selected');
+      return;
+    }
+
+    if (!adminNewProject.project_name || !adminNewProject.comuna || !adminNewProject.address) {
+      setError('Campos obligatorios: nombre, comuna, dirección');
+      return;
+    }
+
+    if (!adminToken) {
+      setError('Debes estar autenticado');
+      return;
+    }
+
+    setAdminUploadingImages(true);
+    setError(null);
+
+    try {
+      const resp = await fetch(`/api/admin/catalog/${projectId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify(adminNewProject)
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.message || 'Error al guardar');
+      }
+
+      const data = await resp.json();
+
+      // Update catalog
+      setAdminCatalog(adminCatalog.map(p => p.id === projectId ? data.project : p));
+
+      alert('✅ Proyecto actualizado');
+      setAdminNewProject({
+        project_name: '', project_state: '', comuna: '', address: '', gmaps_link: '',
+        amenities: '', typologies: '', price_from_uf: '', local_rent_uf: '',
+        appreciation_percent: '', description: '', image_urls: []
+      });
+
+      setTimeout(() => setStep('admin_projects'), 1000);
+    } catch (err) {
+      setError('Error: ' + err.message);
+    } finally {
+      setAdminUploadingImages(false);
+    }
+  };
+
   // HELPER: Modal de galería
   const GalleryModal = ({ images, currentIndex, onClose, onNext, onPrev }) => {
     if (!images || images.length === 0) return null;
