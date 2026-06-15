@@ -1154,6 +1154,52 @@ function Dashboard() {
     }
   };
 
+  // ADMIN: Invitar nuevo admin
+  const handleInviteAdmin = async () => {
+    const { email, nombre } = inviteAdminForm;
+
+    if (!email.trim() || !nombre.trim()) {
+      setError('Email y nombre son obligatorios');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Email inválido');
+      return;
+    }
+
+    const allowedDomains = ['onekeybroker.com', 'lupchile.com', 'lupar.cl'];
+    const domain = email.split('@')[1];
+    if (!allowedDomains.includes(domain)) {
+      setError('El email debe ser de @onekeybroker.com, @lupchile.com o @lupar.cl');
+      return;
+    }
+
+    try {
+      const resp = await fetch('/auth/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ email, nombre })
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json();
+        throw new Error(errData.error || 'Error al invitar');
+      }
+
+      setError(null);
+      alert(`✅ Invitación enviada a ${email}`);
+      setInviteAdminForm({ email: '', nombre: '' });
+      setFormExpandedInviteAdmin(false);
+    } catch (err) {
+      setError('Error: ' + err.message);
+    }
+  };
+
   // HELPER: Modal de galería
   const GalleryModal = ({ images, currentIndex, onClose, onNext, onPrev }) => {
     if (!images || images.length === 0) return null;
