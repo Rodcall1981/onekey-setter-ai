@@ -2101,10 +2101,11 @@ function Dashboard() {
         // Catálogo actual
         e('div', { style: { background: '#fff', padding: '24px', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' } },
           e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '600' } }, `📚 Catálogo (${adminCatalog.length} proyectos)`),
-          adminCatalogLoading ? e('p', null, 'Cargando...') : (
+          adminCatalogLoading ? e('p', null, 'Cargando...') :
             e('div', { style: { display: 'grid', gap: '12px' } },
-              adminCatalog.length === 0 ? e('p', { style: { color: '#666', fontSize: '13px', textAlign: 'center', padding: '24px' } }, 'No hay proyectos aún') : (
-                ...adminCatalog.map(proj =>
+              adminCatalog.length === 0 ?
+                e('p', { style: { color: '#666', fontSize: '13px', textAlign: 'center', padding: '24px' } }, 'No hay proyectos aún') :
+                adminCatalog.map(proj =>
                   e('div', { style: { padding: '12px', background: '#f9f9f9', borderLeft: '3px solid #000', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
                     e('div', null,
                       e('p', { style: { margin: '0 0 4px', fontWeight: '600', fontSize: '13px' } }, proj.project_name),
@@ -2116,9 +2117,7 @@ function Dashboard() {
                     }, 'Eliminar')
                   )
                 )
-              )
             )
-          )
         )
       )
     );
