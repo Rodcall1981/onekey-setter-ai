@@ -1202,9 +1202,25 @@ function Dashboard() {
 
   // ADMIN: Ir a pantalla de edición
   const handleEditProject = (projectId) => {
-    setStep('admin_edit_project');
-    // Store the project ID in a ref or state for the edit screen to access
-    window.editingProjectId = projectId;
+    const projectToEdit = adminCatalog.find(p => p.id === projectId);
+    if (projectToEdit) {
+      setAdminNewProject({
+        project_name: projectToEdit.project_name || '',
+        project_state: projectToEdit.project_state || '',
+        comuna: projectToEdit.comuna || '',
+        address: projectToEdit.address || '',
+        gmaps_link: projectToEdit.gmaps_link || '',
+        price_from_uf: projectToEdit.price_from_uf || '',
+        local_rent_uf: projectToEdit.local_rent_uf || '',
+        appreciation_percent: projectToEdit.appreciation_percent || '',
+        amenities: projectToEdit.amenities || '',
+        typologies: projectToEdit.typologies || '',
+        description: projectToEdit.description || '',
+        image_urls: projectToEdit.image_urls || []
+      });
+      window.editingProjectId = projectId;
+      setStep('admin_edit_project');
+    }
   };
 
   // ADMIN: Guardar cambios en proyecto
@@ -2096,6 +2112,173 @@ function Dashboard() {
               style: { width: '100%', padding: '12px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer', marginTop: '12px', transition: 'background 0.3s' }
             }, 'Cambiar cuenta')
           )
+      )
+    );
+  }
+
+  // ADMIN: EDIT PROJECT SCREEN
+  if (step === 'admin_edit_project' && adminToken && adminRole === 'admin') {
+    const projectId = window.editingProjectId;
+    const editingProject = adminCatalog.find(p => p.id === projectId);
+
+    return e('div', { style: { background: '#f3f4f6', minHeight: '100vh', padding: '24px' } },
+      e('div', { style: { maxWidth: '800px', margin: '0 auto' } },
+        e('div', { style: { marginBottom: '24px' } },
+          e('button', {
+            onClick: () => {
+              setStep('admin_projects');
+              setAdminNewProject({ project_name: '', project_state: '', comuna: '', address: '', gmaps_link: '', amenities: '', typologies: '', price_from_uf: '', local_rent_uf: '', appreciation_percent: '', description: '', image_urls: [] });
+            },
+            style: { padding: '8px 16px', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
+          }, '← Volver al Catálogo')
+        ),
+
+        e('div', { style: { background: '#fff', padding: '32px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' } },
+          e('h1', { style: { margin: '0 0 24px', fontSize: '24px', fontWeight: '700', color: '#1f2937' } }, `Editar: ${editingProject?.project_name || 'Proyecto'}`),
+
+          // FORM FIELDS
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } },
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Nombre del Proyecto'),
+              e('input', {
+                type: 'text',
+                placeholder: 'Nombre proyecto',
+                value: adminNewProject.project_name,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_name: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Estado'),
+              e('select', {
+                value: adminNewProject.project_state,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, project_state: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              },
+                e('option', { value: '' }, 'Selecciona...'),
+                e('option', null, 'Blanco'),
+                e('option', null, 'Verde'),
+                e('option', null, 'Entrega inmediata')
+              )
+            )
+          ),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' } },
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Comuna'),
+              e('input', {
+                type: 'text',
+                placeholder: 'Comuna',
+                value: adminNewProject.comuna,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, comuna: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Dirección'),
+              e('input', {
+                type: 'text',
+                placeholder: 'Dirección',
+                value: adminNewProject.address,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, address: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            )
+          ),
+
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Google Maps link'),
+            e('input', {
+              type: 'text',
+              placeholder: 'Google Maps link',
+              value: adminNewProject.gmaps_link,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, gmaps_link: evt.target.value }),
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+            })
+          ),
+
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' } },
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Precio desde UF'),
+              e('input', {
+                type: 'number',
+                placeholder: 'Precio desde UF',
+                value: adminNewProject.price_from_uf,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, price_from_uf: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Arriendo zona UF'),
+              e('input', {
+                type: 'number',
+                placeholder: 'Arriendo zona UF',
+                value: adminNewProject.local_rent_uf,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, local_rent_uf: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            ),
+            e('div', null,
+              e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Plusvalía %'),
+              e('input', {
+                type: 'number',
+                placeholder: 'Plusvalía %',
+                value: adminNewProject.appreciation_percent,
+                onChange: (evt) => setAdminNewProject({ ...adminNewProject, appreciation_percent: evt.target.value }),
+                style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', boxSizing: 'border-box' }
+              })
+            )
+          ),
+
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Amenities (separadas por coma)'),
+            e('textarea', {
+              placeholder: 'Piscina, Gym, Spa, ...',
+              value: adminNewProject.amenities,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, amenities: evt.target.value }),
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', minHeight: '60px', boxSizing: 'border-box' }
+            })
+          ),
+
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Tipologías'),
+            e('textarea', {
+              placeholder: 'Estudio, 1 dormitorio, ...',
+              value: adminNewProject.typologies,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, typologies: evt.target.value }),
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', minHeight: '60px', boxSizing: 'border-box' }
+            })
+          ),
+
+          e('div', { style: { marginBottom: '16px' } },
+            e('label', { style: { display: 'block', fontSize: '13px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' } }, 'Descripción'),
+            e('textarea', {
+              placeholder: 'Descripción del proyecto',
+              value: adminNewProject.description,
+              onChange: (evt) => setAdminNewProject({ ...adminNewProject, description: evt.target.value }),
+              style: { width: '100%', padding: '10px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px', minHeight: '80px', boxSizing: 'border-box' }
+            })
+          ),
+
+          // ERROR MESSAGE
+          error && e('div', { style: { background: '#fee2e2', color: '#dc2626', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '13px' } }, '⚠️ ' + error),
+
+          // BUTTONS
+          e('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' } },
+            e('button', {
+              onClick: () => {
+                setStep('admin_projects');
+                setAdminNewProject({ project_name: '', project_state: '', comuna: '', address: '', gmaps_link: '', amenities: '', typologies: '', price_from_uf: '', local_rent_uf: '', appreciation_percent: '', description: '', image_urls: [] });
+              },
+              style: { padding: '12px', background: '#e5e7eb', color: '#374151', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }
+            }, 'Cancelar'),
+            e('button', {
+              onClick: handleUpdateProject,
+              disabled: adminUploadingImages,
+              style: { padding: '12px', background: adminUploadingImages ? '#d1d5db' : '#1f2937', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', fontSize: '14px', cursor: adminUploadingImages ? 'not-allowed' : 'pointer' }
+            }, adminUploadingImages ? '⏳ Guardando...' : '✅ Guardar Cambios')
+          )
+        )
       )
     );
   }
