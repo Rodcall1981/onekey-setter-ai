@@ -1097,6 +1097,39 @@ const validateAdminSecret = (req, res, next) => {
   next();
 };
 
+// POST /api/cotizador/sso - genera un token de sesión del Cotizador para el ejecutivo (SSO embebido)
+// Permite abrir el Cotizador dentro del Setter sin que el ejecutivo vuelva a loguearse.
+router.post('/cotizador/sso', verifyJWT, async (req, res) => {
+  try {
+    const email = req.user && req.user.email;
+    if (!email) return res.status(401).json({ error: 'No autenticado' });
+    const url = process.env.COTIZADOR_SUPABASE_URL;
+    const key = process.env.COTIZADOR_SERVICE_KEY;
+    const embedUrl = process.env.COTIZADOR_EMBED_URL || 'https://glowing-rolypoly-77be01.netlify.app';
+    if (!url || !key) {
+      return res.status(500).json({ error: 'Falta configuración del Cotizador (COTIZADOR_SUPABASE_URL / COTIZADOR_SERVICE_KEY)' });
+    }
+    const { createClient } = require('@supabase/supabase-js');
+    const cot = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+    const { data, error } = await cot.auth.admin.generateLink({ type: 'magiclink', email });
+    if (error) return res.status(500).json({ error: error.message });
+    const props = (data && data.properties) || {};
+    if (!props.hashed_token && !props.email_otp) {
+      return res.status(500).json({ error: 'No se pudo generar el token de sesión' });
+    }
+    return res.json({
+      success: true,
+      email,
+      embedUrl,
+      token_hash: props.hashed_token || '',
+      email_otp: props.email_otp || ''
+    });
+  } catch (e) {
+    console.error('SSO Cotizador error:', e.message);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/admin/catalog - listar catálogo
 // Fuente de verdad: el COTIZADOR (edge function catalogo-publico). Si falla, cae al project_catalog local.
 router.get('/admin/catalog', async (req, res) => {

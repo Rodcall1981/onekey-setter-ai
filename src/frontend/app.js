@@ -513,6 +513,9 @@ function Dashboard() {
   const [station4SelectedProjects, setStation4SelectedProjects] = useState(new Set());
   const [galleryModal, setGalleryModal] = useState(null);
   const [galleryCurrentIndex, setGalleryCurrentIndex] = useState(0);
+  // Cotizador embebido (Fase 3)
+  const [cotizadorUrl, setCotizadorUrl] = useState(null);
+  const [cotizandoLoading, setCotizandoLoading] = useState(false);
   const [adminNewProject, setAdminNewProject] = useState({
     project_name: '',
     project_state: 'Blanco',
@@ -902,6 +905,33 @@ function Dashboard() {
       image_urls: catalogProject.image_urls || []
     });
     setError(null);
+  };
+
+  // ESTACIÓN 4: Abrir el Cotizador embebido (SSO silencioso) para el proyecto mostrado
+  const abrirCotizador = async (proj) => {
+    if (!proj) return;
+    setCotizandoLoading(true);
+    try {
+      const resp = await fetch('/api/cotizador/sso', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` }
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) throw new Error(data.error || 'No se pudo abrir el Cotizador');
+      const base = (data.embedUrl || '').replace(/\/$/, '');
+      const params = new URLSearchParams();
+      params.set('embed', '1');
+      params.set('proyecto', proj.codigo || proj.project_name || proj.name || '');
+      if (data.token_hash) params.set('sso', data.token_hash);
+      if (data.email_otp) params.set('sso_otp', data.email_otp);
+      if (data.email) params.set('sso_email', data.email);
+      if (clientName) params.set('cliente', clientName);
+      setCotizadorUrl(base + '/?' + params.toString());
+    } catch (e) {
+      alert('Error al abrir el Cotizador: ' + e.message);
+    } finally {
+      setCotizandoLoading(false);
+    }
   };
 
   // ESTACIÓN 4: Save project
@@ -3611,6 +3641,11 @@ function Dashboard() {
             onClick: () => setStep('station_5_objections'),
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #ff9800', color: '#ff9800', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
           }, '⚠️'),
+          currentProject && projects.length > 0 && e('button', {
+            onClick: () => abrirCotizador(currentProject),
+            disabled: cotizandoLoading,
+            style: { padding: '14px 28px', background: '#0f2741', border: 'none', color: '#fff', borderRadius: '8px', cursor: cotizandoLoading ? 'wait' : 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s', opacity: cotizandoLoading ? 0.6 : 1 }
+          }, cotizandoLoading ? '⏳ Abriendo…' : '💰 Cotizar este proyecto'),
           e('button', {
             onClick: () => setStep('station_6_closing'),
             style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
@@ -3618,6 +3653,26 @@ function Dashboard() {
         )
       ),
       e(Footer),
+      // Modal del Cotizador embebido
+      cotizadorUrl && e('div', {
+        style: { position: 'fixed', inset: '0', background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', flexDirection: 'column', padding: '2vh 2vw' }
+      },
+        e('div', { style: { background: '#fff', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', height: '100%', boxShadow: '0 10px 40px rgba(0,0,0,0.3)' } },
+          e('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: '#0f2741', color: '#fff' } },
+            e('span', { style: { fontWeight: '700', fontSize: '14px' } }, '💰 Cotizador — ' + (currentProject.project_name || '')),
+            e('button', {
+              onClick: () => setCotizadorUrl(null),
+              style: { background: 'transparent', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', borderRadius: '8px', padding: '6px 14px', cursor: 'pointer', fontWeight: '700' }
+            }, '✕ Cerrar')
+          ),
+          e('iframe', {
+            src: cotizadorUrl,
+            title: 'Cotizador OneKey',
+            style: { flex: 1, width: '100%', border: 'none' },
+            allow: 'clipboard-write'
+          })
+        )
+      ),
       // Modal de galería
       galleryModal && e(GalleryModal, {
         images: galleryModal,
