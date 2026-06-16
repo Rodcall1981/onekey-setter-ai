@@ -1097,8 +1097,29 @@ const validateAdminSecret = (req, res, next) => {
   next();
 };
 
-// GET /api/admin/catalog - listar catálogo (sin secret, público)
+// GET /api/admin/catalog - listar catálogo
+// Fuente de verdad: el COTIZADOR (edge function catalogo-publico). Si falla, cae al project_catalog local.
 router.get('/admin/catalog', async (req, res) => {
+  // 1) Intentar leer del Cotizador (fuente única)
+  const catalogUrl = process.env.COTIZADOR_CATALOG_URL;
+  if (catalogUrl) {
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (process.env.COTIZADOR_ANON_KEY) headers['apikey'] = process.env.COTIZADOR_ANON_KEY;
+      if (process.env.COTIZADOR_CATALOG_KEY) headers['x-catalog-key'] = process.env.COTIZADOR_CATALOG_KEY;
+      const r = await fetch(catalogUrl, { headers });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok && Array.isArray(j.projects)) {
+        return res.json({ success: true, source: 'cotizador', projects: j.projects });
+      }
+      console.error('Cotizador catalog respondió sin proyectos:', r.status, j);
+    } catch (err) {
+      console.error('Error consultando el catálogo del Cotizador:', err.message);
+      // sigue al fallback
+    }
+  }
+
+  // 2) Fallback: catálogo local (project_catalog)
   try {
     const { createClient } = require('@supabase/supabase-js');
     const supabase = createClient(
@@ -1121,6 +1142,7 @@ router.get('/admin/catalog', async (req, res) => {
 
     res.json({
       success: true,
+      source: 'local',
       projects: data || []
     });
 
