@@ -910,6 +910,7 @@ function Dashboard() {
   // ESTACIÓN 4: Abrir el Cotizador embebido (SSO silencioso) para el proyecto mostrado
   const abrirCotizador = async (proj) => {
     if (!proj) return;
+    setCurrentProject(proj);
     setCotizandoLoading(true);
     try {
       const resp = await fetch('/api/cotizador/sso', {
@@ -1433,7 +1434,7 @@ function Dashboard() {
   };
 
   // HELPER: Renderizar ficha de proyecto (estilo marketplace)
-  const ProjectCard = ({ project, isSelected, onClick }) => {
+  const ProjectCard = ({ project, isSelected, onClick, onCotizar }) => {
     const mainImage = project.image_urls && project.image_urls.length > 0 ? project.image_urls[0] : null;
     const priceFormatted = project.price_from_uf ? 'UF ' + parseInt(project.price_from_uf).toLocaleString('es-CL') : 'Consultar';
 
@@ -1502,25 +1503,36 @@ function Dashboard() {
           )
         ),
 
-        // CTA Button - siempre al final
-        e('button', {
-          onClick,
-          style: {
-            width: '100%',
-            padding: '12px',
-            background: isSelected ? '#1b5e20' : '#000',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontWeight: '700',
-            fontSize: '13px',
-            transition: 'all 0.2s',
-            marginTop: 'auto'
-          },
-          onMouseEnter: (evt) => evt.currentTarget.style.background = isSelected ? '#0d3a0f' : '#1a1a1a',
-          onMouseLeave: (evt) => evt.currentTarget.style.background = isSelected ? '#1b5e20' : '#000'
-        }, isSelected ? '✓ SELECCIONADO' : '→ COTIZAR')
+        // CTA Buttons - siempre al final
+        onCotizar
+          ? e('div', { style: { display: 'flex', gap: '8px', marginTop: 'auto' } },
+              e('button', {
+                onClick,
+                style: { flex: 1, padding: '12px', background: isSelected ? '#1b5e20' : '#fff', color: isSelected ? '#fff' : '#1b5e20', border: '2px solid #1b5e20', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', transition: 'all 0.2s' }
+              }, isSelected ? '✓ Revisando' : '📋 Revisar'),
+              e('button', {
+                onClick: onCotizar,
+                style: { flex: 1, padding: '12px', background: '#0f2741', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px', transition: 'all 0.2s' }
+              }, '💰 Cotizar')
+            )
+          : e('button', {
+              onClick,
+              style: {
+                width: '100%',
+                padding: '12px',
+                background: isSelected ? '#1b5e20' : '#000',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: '700',
+                fontSize: '13px',
+                transition: 'all 0.2s',
+                marginTop: 'auto'
+              },
+              onMouseEnter: (evt) => evt.currentTarget.style.background = isSelected ? '#0d3a0f' : '#1a1a1a',
+              onMouseLeave: (evt) => evt.currentTarget.style.background = isSelected ? '#1b5e20' : '#000'
+            }, isSelected ? '✓ SELECCIONADO' : '→ COTIZAR')
       )
     );
   };
@@ -3552,7 +3564,8 @@ function Dashboard() {
               key: idx,
               project: proj,
               isSelected: currentProject.project_number === proj.project_number,
-              onClick: () => setCurrentProject(proj)
+              onClick: () => setCurrentProject(proj),
+              onCotizar: () => abrirCotizador(proj)
             })
           )
         ) : (
@@ -3641,11 +3654,6 @@ function Dashboard() {
             onClick: () => setStep('station_5_objections'),
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #ff9800', color: '#ff9800', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
           }, '⚠️'),
-          currentProject && projects.length > 0 && e('button', {
-            onClick: () => abrirCotizador(currentProject),
-            disabled: cotizandoLoading,
-            style: { padding: '14px 28px', background: '#0f2741', border: 'none', color: '#fff', borderRadius: '8px', cursor: cotizandoLoading ? 'wait' : 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s', opacity: cotizandoLoading ? 0.6 : 1 }
-          }, cotizandoLoading ? '⏳ Abriendo…' : '💰 Cotizar este proyecto'),
           e('button', {
             onClick: () => setStep('station_6_closing'),
             style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
