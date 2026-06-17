@@ -260,27 +260,48 @@ const QUESTIONS = [
   }
 ];
 
-const Header = ({ step, advisorName, clientName, completedCount }) => {
-  const showProgress = step === 'questions';
+const CLASIF_PANTALLA = {
+  apertura: 'priv', questions: 'priv', discovery: 'priv', profile_semaforo: 'mixed',
+  station_4_summary: 'priv', station_4_form: 'priv', station_4_projects: 'public',
+  station_5: 'priv', station_6: 'priv', questions_old: 'priv', setup: 'priv'
+};
+const Header = ({ step, advisorName, clientName, modoCliente, onToggleModoCliente, completedCount }) => {
+  const showProgress = step === 'questions' || step === 'discovery';
   const getStepLabel = () => {
     if (step === 'apertura') return 'Estación 1: Apertura';
-    if (step === 'questions') return 'Estación 2: Discovery';
+    if (step === 'questions' || step === 'discovery') return 'Estación 2: Discovery';
     return 'OneKey Setter';
   };
+  const clasif = CLASIF_PANTALLA[step] || 'priv';
+  const badge = clasif === 'public'
+    ? { bg: '#1b5e20', txt: '👁  Puedes mostrar esta pantalla al cliente' }
+    : clasif === 'mixed'
+    ? { bg: '#b06a00', txt: '⚠️  Mixta — muestra solo la Capacidad de compra, oculta el perfil' }
+    : { bg: '#b71c1c', txt: '🔒  Pantalla de apoyo — NO mostrar al cliente' };
 
-  return e('div', { style: { background: '#383838', color: '#fff', padding: '16px 32px', borderBottom: '1px solid #4d5c61', position: 'sticky', top: 0, zIndex: 100 } },
-    e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
-      e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
-        e('span', { style: { fontSize: '18px', fontWeight: '300', letterSpacing: '-0.5px' } }, 'onekey'),
-        e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, getStepLabel())
-      ),
-      showProgress && e('div', { style: { textAlign: 'right' } },
-        e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/8' : 'Progreso'),
-        e('div', { style: { width: '120px', background: '#515266', height: '3px', borderRadius: '2px', overflow: 'hidden' } },
-          e('div', { style: { background: '#d1dfdf', height: '100%', width: (completedCount / 8 * 100) + '%', transition: 'width 0.3s' } })
+  return e('div', { style: { position: 'sticky', top: 0, zIndex: 100 } },
+    e('div', { style: { background: '#383838', color: '#fff', padding: '12px 32px', borderBottom: '1px solid #4d5c61' } },
+      e('div', { style: { maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' } },
+        e('div', { style: { display: 'flex', alignItems: 'center', gap: '12px' } },
+          e('span', { style: { fontSize: '18px', fontWeight: '300', letterSpacing: '-0.5px' } }, 'onekey'),
+          e('span', { style: { fontSize: '12px', color: '#aaa', fontWeight: '400' } }, getStepLabel())
+        ),
+        e('div', { style: { display: 'flex', alignItems: 'center', gap: '16px' } },
+          onToggleModoCliente && e('button', {
+            onClick: onToggleModoCliente,
+            title: 'Oculta el material de apoyo para poder compartir la pantalla con el cliente',
+            style: { padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '12px', background: modoCliente ? '#1b5e20' : '#515266', color: '#fff' }
+          }, modoCliente ? '👁 Modo cliente: ON' : '🙈 Modo cliente: OFF'),
+          showProgress && e('div', { style: { textAlign: 'right' } },
+            e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/8' : 'Progreso'),
+            e('div', { style: { width: '120px', background: '#515266', height: '3px', borderRadius: '2px', overflow: 'hidden' } },
+              e('div', { style: { background: '#d1dfdf', height: '100%', width: (completedCount / 8 * 100) + '%', transition: 'width 0.3s' } })
+            )
+          )
         )
       )
-    )
+    ),
+    e('div', { style: { background: badge.bg, color: '#fff', textAlign: 'center', padding: '6px 12px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.3px' } }, badge.txt)
   );
 };
 
@@ -298,6 +319,21 @@ const Footer = () => {
     )
   );
 };
+
+function emptyDiscovery() {
+  return {
+    p0: { intention: [], notes: '' },
+    p1: { age: '', job_description: '', job_type: [], tenure: [], notes: '' },
+    p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
+    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
+    p4: { motivation: [], urgency: 3, notes: '' },
+    p5: { pain: [], intensity: 3, notes: '' },
+    p6: { anchor: [], notes: '' },
+    p7: { decision_makers: [], hidden_decisor_flag: false, notes: '' },
+    p8: { readiness: 5, friction: [], notes: '' }
+  };
+}
+const PERSIST_KEY = 'setterSesionEnCurso';
 
 function Dashboard() {
   const [step, setStep] = useState('setup');
@@ -329,19 +365,56 @@ function Dashboard() {
     }
   }, []);
 
+  // Rehidratar la reunión en curso al montar (sobrevive recargas / "atrás" del navegador)
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.step && s.step !== 'setup') {
+          if (s.advisorName) setAdvisorName(s.advisorName);
+          if (s.clientName) setClientName(s.clientName);
+          if (s.sessionId) setSessionId(s.sessionId);
+          if (s.reunionMode) setReunionMode(s.reunionMode);
+          if (typeof s.consentGiven === 'boolean') setConsentGiven(s.consentGiven);
+          if (s.discoveryAnswers) setDiscoveryAnswers(s.discoveryAnswers);
+          if (s.profileSemaforo) setProfileSemaforo(s.profileSemaforo);
+          if (typeof s.profileConfirmed === 'boolean') setProfileConfirmed(s.profileConfirmed);
+          if (s.selectedProfile) setSelectedProfile(s.selectedProfile);
+          if (s.summary) setSummary(s.summary);
+          if (Array.isArray(s.projects)) setProjects(s.projects);
+          if (s.currentProject) setCurrentProject(s.currentProject);
+          setStep(s.step);
+        }
+      }
+    } catch (_) {}
+    setHidratado(true);
+  }, []);
+
+  // Guardar snapshot de la reunión en cada cambio relevante
+  React.useEffect(() => {
+    if (!hidratado || step === 'setup') return;
+    try {
+      localStorage.setItem(PERSIST_KEY, JSON.stringify({
+        step, sessionId, advisorName, clientName, reunionMode, consentGiven,
+        discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile,
+        summary, projects, currentProject, _ts: Date.now()
+      }));
+    } catch (_) {}
+  }, [hidratado, step, sessionId, advisorName, clientName, reunionMode, consentGiven, discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile, summary, projects, currentProject]);
+
+  // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
+  React.useEffect(() => { setError(null); }, [step]);
+
   // ESTACIÓN 2: Discovery responses
-  const [discoveryAnswers, setDiscoveryAnswers] = useState({
-    p0: { intention: [], notes: '' },
-    p1: { age: '', job_description: '', job_type: [], tenure: [], notes: '' },
-    p2: { monthly_income: '', total_debt: '', debt_types: [], notes: '' },
-    p3: { down_payment: '', down_payment_uf: 0, down_payment_range: '', contado: false, notes: '' },
-    p4: { motivation: [], urgency: 3, notes: '' },
-    p5: { pain: [], intensity: 3, notes: '' },
-    p6: { anchor: [], notes: '' },
-    p7: { decision_makers: [], hidden_decisor_flag: false, notes: '' },
-    p8: { readiness: 5, friction: [], notes: '' }
-  });
+  const [discoveryAnswers, setDiscoveryAnswers] = useState(emptyDiscovery());
   const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
+  const [expandedSidePanel, setExpandedSidePanel] = useState(false);
+  const [objectionReturnStep, setObjectionReturnStep] = useState('station_4_projects_view');
+  const [hidratado, setHidratado] = useState(false);
+  // Modo Cliente: oculta el material de apoyo (coaching, perfil, guiones) para poder compartir pantalla
+  const [modoCliente, setModoCliente] = useState(() => { try { return localStorage.getItem('modoCliente') === '1'; } catch (_) { return false; } });
+  const onToggleModoCliente = () => setModoCliente(v => { const nv = !v; try { localStorage.setItem('modoCliente', nv ? '1' : '0'); } catch (_) {} return nv; });
   const [focusedNoteField, setFocusedNoteField] = useState(null); // Para focus automático en "Otra"
 
   // ESTACIÓN 3: Profile + Capacity
@@ -351,6 +424,7 @@ function Dashboard() {
 
   // ESTACIÓN 4: Summary Panel
   const [summary, setSummary] = useState(null);
+  const [summaryError, setSummaryError] = useState(false);
 
   // ESTACIÓN 4: Projects Form
   const [projects, setProjects] = useState([]);  // Array de proyectos guardados
@@ -535,16 +609,19 @@ function Dashboard() {
   // Load summary when entering Station 4
   React.useEffect(() => {
     if (step === 'station_4_summary' && !summary && sessionId) {
+      setSummaryError(false);
       fetch(`/api/summary/${sessionId}`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.summary) {
             setSummary(data.summary);
+          } else {
+            setSummaryError(true);
           }
         })
-        .catch(err => console.error('Summary fetch error:', err));
+        .catch(err => { console.error('Summary fetch error:', err); setSummaryError(true); });
     }
-  }, [step, sessionId]);
+  }, [step, sessionId, summary]);
 
   // Load admin catalog when entering admin projects screen
   React.useEffect(() => {
@@ -602,29 +679,13 @@ function Dashboard() {
       const newSessionId = sessionData.id;
       setSessionId(newSessionId);
 
-      // 2. Registrar evento 'station_started' para Estación 1 en session_events
-      await fetch('/api/events', {
+      // Eventos de telemetría (no bloquean el avance ni crean sesiones duplicadas si falla la red)
+      const _ev = (n) => fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: newSessionId,
-          advisor_name: advisorName.trim(),
-          event_type: 'station_started',
-          station_number: 1
-        })
-      });
-
-      // 3. Registrar evento 'station_started' para Estación 2 (Discovery) al avanzar
-      await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: newSessionId,
-          advisor_name: advisorName.trim(),
-          event_type: 'station_started',
-          station_number: 2
-        })
-      });
+        body: JSON.stringify({ session_id: newSessionId, advisor_name: advisorName.trim(), event_type: 'station_started', station_number: n })
+      }).catch(() => {});
+      _ev(1); _ev(2);
 
       // Avanzar a Estación 2 (Discovery)
       setStep('questions');
@@ -910,8 +971,10 @@ function Dashboard() {
   // ESTACIÓN 4: Abrir el Cotizador embebido (SSO silencioso) para el proyecto mostrado
   const abrirCotizador = async (proj) => {
     if (!proj) return;
+    if (!adminToken) { setError('Debes iniciar sesión para abrir el Cotizador.'); return; }
     setCurrentProject(proj);
     setCotizandoLoading(true);
+    setError(null);
     try {
       const resp = await fetch('/api/cotizador/sso', {
         method: 'POST',
@@ -929,7 +992,7 @@ function Dashboard() {
       if (clientName) params.set('cliente', clientName);
       setCotizadorUrl(base + '/?' + params.toString());
     } catch (e) {
-      alert('Error al abrir el Cotizador: ' + e.message);
+      setError('No se pudo abrir el Cotizador: ' + e.message);
     } finally {
       setCotizandoLoading(false);
     }
@@ -937,8 +1000,13 @@ function Dashboard() {
 
   // ESTACIÓN 4: Save project
   const saveProject = async () => {
-    if (!currentProject.comuna || !currentProject.address || !currentProject.typologies || !currentProject.price_from_uf) {
-      setError('Por favor completa los campos obligatorios');
+    const faltan = [];
+    if (!currentProject.comuna) faltan.push('Comuna');
+    if (!currentProject.address) faltan.push('Dirección');
+    if (!currentProject.typologies) faltan.push('Tipologías');
+    if (!currentProject.price_from_uf) faltan.push('Precio desde (UF)');
+    if (faltan.length) {
+      setError('Faltan campos obligatorios: ' + faltan.join(', '));
       return;
     }
 
@@ -1024,7 +1092,7 @@ function Dashboard() {
     let suggested = { primary: null, alternative: null };
 
     // Clasificar según perfil y prontitud
-    if (profile === 'INVERSIONISTA' || profile === 'EXPERTO') {
+    if (profile === 'INVERSIONISTA' || profile === 'EXPERTO' || profile === 'INVERSIONISTA_EXPERTO') {
       // Analítico
       suggested.primary = 'ALTERNATIVO';
       suggested.alternative = 'PREGUNTA_INVERSA';
@@ -1438,9 +1506,12 @@ function Dashboard() {
     const mainImage = project.image_urls && project.image_urls.length > 0 ? project.image_urls[0] : null;
     const priceFormatted = project.price_from_uf ? 'UF ' + parseInt(project.price_from_uf).toLocaleString('es-CL') : 'Consultar';
 
-    const stateBadgeColor = project.project_state === 'Blanco' ? '#e74c3c'
+    const stateBadgeColor = project.project_state === 'Blanco' ? '#607d8b'
                           : project.project_state === 'Verde' ? '#27ae60'
                           : project.project_state === 'Entrega inmediata' ? '#3498db' : '#95a5a6';
+    const stateLabel = project.project_state === 'Blanco' ? 'En planos'
+                     : project.project_state === 'Verde' ? 'En construcción'
+                     : (project.project_state || 'Proyecto');
 
     return e('div', {
       style: {
@@ -1470,7 +1541,7 @@ function Dashboard() {
           style: { width: '100%', height: '100%', objectFit: 'cover' }
         }) : e('div', { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' } }, '📸'),
         // Badge de estado
-        e('div', { style: { position: 'absolute', top: '12px', right: '12px', background: stateBadgeColor, color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' } }, project.project_state)
+        e('div', { style: { position: 'absolute', top: '12px', right: '12px', background: stateBadgeColor, color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' } }, stateLabel)
       ),
 
       // Contenido - flex para llenar espacio
@@ -1539,12 +1610,16 @@ function Dashboard() {
 
   // Reset para nueva sesión
   const resetSession = () => {
+    try { localStorage.removeItem(PERSIST_KEY); } catch (_) {}
     setStep('apertura');
     setSessionId(null);
     setClientName('');
     setReunionMode('1_reunion');
     setConsentGiven(false);
-    setDiscoveryAnswers({});
+    setDiscoveryAnswers(emptyDiscovery());
+    setProfileSemaforo(null);
+    setSelectedProfile(null);
+    setProfileConfirmed(false);
     setSummary(null);
     setProjects([]);
     setCurrentProject({
@@ -1570,6 +1645,7 @@ function Dashboard() {
   // ESTACIÓN 6: Guardar cierre
   const handleSaveClosing = async (result) => {
     // result: 'RESERVÓ' | 'OFRECÍ_NO' | 'NO_OFRECÍ'
+    if (closingSaving) return; // evita doble envío / cierres duplicados
 
     if (closingReservationOffered === null) {
       setError('Debes indicar si ofreciste la reserva (Sí/No)');
@@ -1657,8 +1733,17 @@ function Dashboard() {
       const data = await resp.json();
       setObjectionsResolutionSteps(data.resolution_steps);
     } catch (err) {
-      setError('Error: ' + err.message);
       console.error('Objection error:', err);
+      // Fallback: guion genérico de 5 pasos para que el ejecutivo NO quede sin libreto en plena reunión
+      setObjectionsResolutionSteps({
+        paso_1_acuerdo: 'Valida sin discutir: "Entiendo perfectamente, es una decisión importante y tiene sentido que lo pienses bien."',
+        paso_2_aislamiento: 'Aísla la objeción real: "Aparte de eso, ¿hay algo más que te detenga? Si resolviéramos esto, ¿avanzarías hoy?"',
+        paso_3_indagacion: 'Indaga el motivo de fondo: "¿Qué es lo que más pesa en tu decisión en este momento?"',
+        paso_4_reframe: 'Reencuadra con valor concreto: precio congelado con la reserva, plusvalía de la zona y respaldo de la inmobiliaria.',
+        paso_5_test: 'Test de cierre suave: "¿Te hace sentido dejar la unidad reservada hoy para asegurar esta UF, mientras revisas el resto con calma?"',
+        _fallback: true
+      });
+      setError('La IA no está disponible ahora — te dejé un guion genérico de respaldo para que sigas la reunión.');
     } finally {
       setObjectionsGenerating(false);
     }
@@ -1818,6 +1903,13 @@ function Dashboard() {
       return;
     }
 
+    const ageVal = parseInt(discoveryAnswers.p1 && discoveryAnswers.p1.age);
+    const incomeVal = parseFloat(discoveryAnswers.p2 && discoveryAnswers.p2.monthly_income);
+    if (!ageVal || ageVal <= 0 || !incomeVal || incomeVal <= 0) {
+      setError('Para calcular la capacidad de compra necesito la EDAD (P1) y la RENTA mensual (P2) del cliente. Complétalas antes de continuar.');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -1898,10 +1990,11 @@ function Dashboard() {
       if (profileData) {
         setProfileSemaforo(profileData);
         setSelectedProfile(profileData.profileDetected);
+        // Avanzar a Estación 3 (Perfil + Semáforo) SOLO si se calculó bien
+        setStep('profile_semaforo');
+      } else {
+        setError('No pude calcular el perfil y la capacidad (revisa la conexión). Inténtalo de nuevo; tus respuestas no se pierden.');
       }
-
-      // Avanzar a Estación 3 (Perfil + Semáforo)
-      setStep('profile_semaforo');
     } catch (err) {
       setError('Error: ' + err.message);
       console.error('saveDiscoveryAndProceed error:', err);
@@ -2750,7 +2843,7 @@ function Dashboard() {
     const canProceed = consentGiven && advisorName.trim() && clientName.trim();
 
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'apertura', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'apertura', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '48px 32px', width: '100%' } },
         // Banner de estado
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
@@ -2762,7 +2855,7 @@ function Dashboard() {
         ),
 
         // Sesiones recientes
-        recentSessions.length > 0 && e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px', borderLeft: '4px solid #1b5e20' } },
+        !modoCliente && recentSessions.length > 0 && e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: '24px', borderLeft: '4px solid #1b5e20' } },
           e('p', { style: { margin: '0 0 16px', fontSize: '13px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '📋 MIS SESIONES RECIENTES'),
           e('div', { style: { display: 'grid', gap: '12px' } },
             ...recentSessions.slice(0, 5).map(sess =>
@@ -2884,6 +2977,17 @@ function Dashboard() {
     );
   }
 
+  // ESTACIÓN 3: pantalla de error si llegó sin datos de perfil (evita "Cargando…" eterno)
+  if (step === 'profile_semaforo' && !profileSemaforo) {
+    return e('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '24px', textAlign: 'center' } },
+      e('p', { style: { fontSize: '15px', color: '#c62828', maxWidth: '420px' } }, '⚠️ No pude calcular el perfil y la capacidad. Suele ser conexión o faltan edad/renta en Discovery.'),
+      e('button', {
+        onClick: () => setStep('questions'),
+        style: { padding: '12px 22px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }
+      }, '← Volver a Discovery')
+    );
+  }
+
   // ESTACIÓN 3: PERFIL + SEMÁFORO
   if (step === 'profile_semaforo' && profileSemaforo) {
     const profileColors = {
@@ -2904,15 +3008,15 @@ function Dashboard() {
     const showCaseByCase = capacity.loanTermYears === 0; // Edad 66+
 
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'profile_semaforo', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'profile_semaforo', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
         // Banner
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 3: PERFIL + CAPACIDAD DE COMPRA')
         ),
 
-        // PERFIL
-        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+        // PERFIL (clasificación interna — oculta en Modo Cliente)
+        !modoCliente && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
           e('p', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '👤 PERFIL DETECTADO'),
           e('div', { style: { background: profileColors[profileSemaforo.profileDetected] || '#ccc', color: '#fff', padding: '16px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center', fontSize: '16px', fontWeight: '600' } }, profileLabels[profileSemaforo.profileDetected]),
           profileSemaforo.profileAlt && e('div', { style: { background: '#f5f5f5', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px', color: '#666' } },
@@ -2992,7 +3096,7 @@ function Dashboard() {
   // ESTACIÓN 4: FORMULARIO DE PROYECTOS (PARTE B)
   if (step === 'station_4_projects_form') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'station_4_form', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px', width: '100%' } },
         // Banner
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
@@ -3026,7 +3130,7 @@ function Dashboard() {
                 .filter(proj => !station4CatalogFilter || proj.comuna === station4CatalogFilter)
                 .map((proj, idx) =>
                   e(ProjectCard, {
-                    key: idx,
+                    key: proj.id || idx,
                     project: proj,
                     isSelected: station4SelectedProjects.has(proj.id),
                     onClick: () => {
@@ -3199,7 +3303,11 @@ function Dashboard() {
           error && e('div', { style: { background: '#ffebee', color: '#c62828', padding: '12px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px' } }, error),
 
           // Botones
-          e('div', { style: { display: 'flex', gap: '12px' } },
+          e('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap' } },
+            e('button', {
+              onClick: () => setStep('station_4_summary'),
+              style: { padding: '12px 18px', background: '#fff', border: '2px solid #666', color: '#666', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+            }, '← Volver'),
             e('button', {
               onClick: saveProject,
               disabled: loading || uploadingImages,
@@ -3218,6 +3326,18 @@ function Dashboard() {
 
   // ESTACIÓN 6: CIERRE + RESERVA
   if (step === 'station_6_closing') {
+    if (modoCliente) {
+      return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f7fa' } },
+        e(Header, { step: 'station_6', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
+        e('main', { style: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' } },
+          e('div', { style: { background: '#fff', borderRadius: '12px', padding: '32px', textAlign: 'center', maxWidth: '460px', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' } },
+            e('p', { style: { fontSize: '15px', color: '#333', margin: '0 0 16px' } }, '🔒 El Cierre es material de apoyo (guiones de venta). Está oculto mientras compartes pantalla con el cliente.'),
+            e('button', { onClick: onToggleModoCliente, style: { padding: '12px 22px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' } }, 'Desactivar Modo Cliente')
+          )
+        ),
+        e(Footer)
+      );
+    }
     const closingSuggestion = getClosingSuggestion();
     const CIERRE_SCRIPTS = {
       ASUMIDO: {
@@ -3257,14 +3377,14 @@ function Dashboard() {
     };
 
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'station_6', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'station_6', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
         e('div', { style: { background: '#1b5e20', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '✅ ESTACIÓN 6: CIERRE + RESERVA'),
           e('button', {
-            onClick: () => setStep('station_4_projects_view'),
+            onClick: () => setStep(objectionReturnStep),
             style: { padding: '8px 16px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'all 0.2s' }
-          }, '← Volver a proyectos')
+          }, objectionReturnStep === 'station_6_closing' ? '← Volver al Cierre' : '← Volver a proyectos')
         ),
 
         // Cierre sugerido
@@ -3365,9 +3485,9 @@ function Dashboard() {
         closingReservationOffered === true && (
           e('div', { style: { marginBottom: '24px' } },
             e('button', {
-              onClick: () => setStep('station_5_objections'),
+              onClick: () => { setObjectionReturnStep('station_6_closing'); setStep('station_5_objections'); },
               style: { width: '100%', padding: '12px', background: '#ff9800', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-            }, '⚠️')
+            }, '⚠️ Manejar objeción')
           )
         ),
 
@@ -3398,6 +3518,18 @@ function Dashboard() {
 
   // ESTACIÓN 5: OBJECIONES
   if (step === 'station_5_objections') {
+    if (modoCliente) {
+      return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f5f7fa' } },
+        e(Header, { step: 'station_5', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
+        e('main', { style: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px' } },
+          e('div', { style: { background: '#fff', borderRadius: '12px', padding: '32px', textAlign: 'center', maxWidth: '460px', boxShadow: '0 2px 10px rgba(0,0,0,0.08)' } },
+            e('p', { style: { fontSize: '15px', color: '#333', margin: '0 0 16px' } }, '🔒 El manejo de dudas es material de apoyo. Está oculto mientras compartes pantalla con el cliente.'),
+            e('button', { onClick: onToggleModoCliente, style: { padding: '12px 22px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' } }, 'Desactivar Modo Cliente')
+          )
+        ),
+        e(Footer)
+      );
+    }
     const PREBUILT_OBJECTIONS = {
       PENSAR_CON_PAREJA: { titulo: 'Lo voy a pensar / lo converso con mi pareja', icon: '💭' },
       CARO_ESPERAR: { titulo: 'Está caro / mejor espero que bajen las tasas', icon: '💰' },
@@ -3409,7 +3541,7 @@ function Dashboard() {
     // Si está mostrando los pasos de resolución
     if (objectionsResolutionSteps) {
       return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-        e(Header, { step: 'station_5', advisorName, clientName, completedCount: 0 }),
+        e(Header, { step: 'station_5', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
         e('main', { style: { flex: 1, maxWidth: '1000px', margin: '0 auto', padding: '32px', width: '100%' } },
           // Loop de 5 pasos (marco fijo)
           e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
@@ -3453,9 +3585,9 @@ function Dashboard() {
               style: { padding: '12px 24px', background: '#fff', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
             }, '← Otra objeción'),
             e('button', {
-              onClick: () => { setObjectionsResolutionSteps(null); setCurrentObjectionType(null); setStep('station_4_projects_view'); },
+              onClick: () => { setObjectionsResolutionSteps(null); setCurrentObjectionType(null); setStep(objectionReturnStep); },
               style: { padding: '12px 24px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '14px' }
-            }, 'Objeción resuelta ✓')
+            }, objectionReturnStep === 'station_6_closing' ? 'Objeción resuelta → volver al Cierre ✓' : 'Objeción resuelta ✓')
           )
         ),
         e(Footer)
@@ -3464,14 +3596,14 @@ function Dashboard() {
 
     // Mostrar selector de las 5 objeciones o formulario para nueva
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'station_5', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'station_5', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '900px', margin: '0 auto', padding: '32px', width: '100%' } },
         e('div', { style: { background: '#ff9800', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '⚠️ ESTACIÓN 5: OBJECIONES'),
           e('button', {
-            onClick: () => setStep('station_4_projects_view'),
+            onClick: () => setStep(objectionReturnStep),
             style: { padding: '8px 16px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: '#fff', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', transition: 'all 0.2s' }
-          }, '← Volver a proyectos')
+          }, objectionReturnStep === 'station_6_closing' ? '← Volver al Cierre' : '← Volver a proyectos')
         ),
 
         // Las 5 grandes pre-resueltas
@@ -3548,7 +3680,7 @@ function Dashboard() {
   // ESTACIÓN 4: PARTE C - Vista de Proyectos
   if (step === 'station_4_projects_view') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' } },
-      e(Header, { step: 'station_4_projects', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'station_4_projects', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '40px 24px', width: '100%' } },
         // Banner
         e('div', { style: { background: 'linear-gradient(135deg, #1b5e20 0%, #0d3a0f 100%)', color: '#fff', borderRadius: '12px', padding: '24px', marginBottom: '40px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)' } },
@@ -3561,7 +3693,7 @@ function Dashboard() {
         projects && projects.length > 0 ? e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px', marginBottom: '40px' } },
           ...projects.map((proj, idx) =>
             e(ProjectCard, {
-              key: idx,
+              key: proj.id || idx,
               project: proj,
               isSelected: currentProject.project_number === proj.project_number,
               onClick: () => setCurrentProject(proj),
@@ -3640,6 +3772,9 @@ function Dashboard() {
           )
         ),
 
+        // Mensaje de error (ej. al abrir el Cotizador)
+        error && e('div', { style: { background: '#ffebee', color: '#c62828', padding: '12px 16px', borderRadius: '8px', margin: '0 auto 16px', maxWidth: '600px', fontSize: '13px', textAlign: 'center' } }, error),
+
         // Botones de acción
         e('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' } },
           e('button', {
@@ -3650,10 +3785,10 @@ function Dashboard() {
             onClick: () => setStep('station_4_projects_form'),
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #1b5e20', color: '#1b5e20', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
           }, '➕ Cargar más proyectos'),
-          e('button', {
-            onClick: () => setStep('station_5_objections'),
+          !modoCliente && e('button', {
+            onClick: () => { setObjectionReturnStep('station_4_projects_view'); setStep('station_5_objections'); },
             style: { padding: '14px 28px', background: '#fff', border: '2px solid #ff9800', color: '#ff9800', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
-          }, '⚠️'),
+          }, 'Conversar dudas'),
           e('button', {
             onClick: () => setStep('station_6_closing'),
             style: { padding: '14px 28px', background: '#1b5e20', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px', transition: 'all 0.2s' }
@@ -3695,8 +3830,18 @@ function Dashboard() {
   // ESTACIÓN 4: RESUMEN (Panel)
   if (step === 'station_4_summary') {
     if (!summary) {
-      return e('div', { style: { display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' } },
-        e('p', null, 'Cargando resumen...')
+      return e('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', padding: '24px', textAlign: 'center' } },
+        e('p', { style: { fontSize: '15px', color: summaryError ? '#c62828' : '#333' } }, summaryError ? '⚠️ No pude cargar el resumen (revisa la conexión).' : '⏳ Cargando resumen...'),
+        summaryError && e('div', { style: { display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' } },
+          e('button', {
+            onClick: () => { setSummaryError(false); setSummary(null); setStep('station_4_summary'); },
+            style: { padding: '12px 22px', background: '#1b5e20', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }
+          }, '↻ Reintentar'),
+          e('button', {
+            onClick: () => setStep('profile_semaforo'),
+            style: { padding: '12px 22px', background: '#fff', color: '#666', border: '2px solid #666', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' }
+          }, '← Volver a Estación 3')
+        )
       );
     }
 
@@ -3719,15 +3864,15 @@ function Dashboard() {
     };
 
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'station_4_summary', advisorName, clientName, completedCount: 0 }),
+      e(Header, { step: 'station_4_summary', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: 0 }),
       e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '32px', width: '100%' } },
         // Banner
         e('div', { style: { background: '#383838', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px' } },
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 4: PROYECTO + PALANCAS + ANCLAJE')
         ),
 
-        // PANEL DE RESUMEN - Grid de 3 columnas
-        e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
+        // PANEL DE RESUMEN - Grid de 3 columnas (expediente interno — oculto en Modo Cliente)
+        !modoCliente && e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
           // Col 1: INTENCIÓN + PERFIL
           e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
             e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '🎯 Intención'),
@@ -3759,18 +3904,18 @@ function Dashboard() {
         ),
 
         // Segunda fila: DECISOR + PRONTITUD + CAPACIDAD
-        e('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
-          // Decisor
-          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+        e('div', { style: { display: 'grid', gridTemplateColumns: modoCliente ? '1fr' : 'repeat(3, 1fr)', gap: '16px', marginBottom: '24px' } },
+          // Decisor (interno — oculto en Modo Cliente)
+          !modoCliente && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
             e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '👥 Decisor'),
             e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
               e('div', null, summary.decisionMakers && summary.decisionMakers.join(', ')),
-              summary.hasHiddenDecision && e('div', { style: { color: '#e67e22', fontWeight: '600', marginTop: '8px' } }, '⚠️ Hay decisor oculto')
+              summary.hasHiddenDecision && e('div', { style: { color: '#e67e22', fontWeight: '600', marginTop: '8px' } }, 'ℹ️ Participa otra persona en la decisión')
             )
           ),
 
-          // Prontitud + Frenos
-          e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
+          // Prontitud + Frenos (interno — oculto en Modo Cliente)
+          !modoCliente && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
             e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#666', textTransform: 'uppercase' } }, '⚡ Prontitud'),
             e('div', { style: { fontSize: '12px', lineHeight: '1.6', color: '#333' } },
               e('div', { style: { fontSize: '18px', fontWeight: '700', color: '#1b5e20' } }, summary.readiness + '/10'),
@@ -3809,12 +3954,12 @@ function Dashboard() {
   // ESTACIÓN 2: DISCOVERY
   if (step === 'questions') {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step: 'discovery', advisorName, clientName, completedCount: discoveryCompletedCount }),
+      e(Header, { step: 'discovery', advisorName, clientName, modoCliente, onToggleModoCliente, completedCount: discoveryCompletedCount }),
       e('main', { style: { flex: 1, maxWidth: '1400px', margin: '0 auto', padding: '32px', width: '100%', display: 'grid', gridTemplateColumns: '1fr 250px', gap: '24px' } },
         // Main content
         e('div', null,
-          // Banner rojo fijo: CERO PROPIEDADES
-          e('div', { style: { background: '#b71c1c', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontWeight: '600', fontSize: '14px', display: 'flex', gap: '8px', alignItems: 'center' } },
+          // Banner rojo fijo: CERO PROPIEDADES (coaching interno — oculto en Modo Cliente)
+          !modoCliente && e('div', { style: { background: '#b71c1c', color: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', fontWeight: '600', fontSize: '14px', display: 'flex', gap: '8px', alignItems: 'center' } },
             e('span', { style: { fontSize: '18px' } }, '🚫'),
             e('span', null, 'CERO PROPIEDADES HASTA TERMINAR ESTA ESTACIÓN')
           ),
@@ -3837,7 +3982,7 @@ function Dashboard() {
                   const answer = discoveryAnswers[field];
 
                   return e('div', null,
-                    e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#666' } }, '💡 ' + q.help),
+                    !modoCliente && e('p', { style: { margin: '0 0 12px', fontSize: '12px', color: '#666' } }, '💡 ' + q.help),
 
                     // Inputs dinámicos según tipo
                     [
@@ -3994,8 +4139,8 @@ function Dashboard() {
           )
         ),
 
-        // Panel lateral: Qué escuchar + Si se desvía
-        e('aside', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
+        // Panel lateral: Qué escuchar + Si se desvía (coaching interno — oculto en Modo Cliente)
+        !modoCliente && e('aside', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } },
           // Qué escuchar (fijo)
           e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', position: 'sticky', top: '16px' } },
             e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#000' } }, '👂 Qué escuchar'),
@@ -4029,9 +4174,9 @@ function Dashboard() {
   }
 
   // OLD Questions Screen (fallback, will be removed after phase 2)
-  if (step === 'questions_old') {
+  if (false && step === 'questions_old') { // DESACTIVADO: flujo viejo con textos internos sensibles ("red flag", etc.). No renderizar nunca.
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step, advisorName, clientName, completedCount }),
+      e(Header, { step, advisorName, clientName, modoCliente, onToggleModoCliente, completedCount }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px', width: '100%' } },
         e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
           e('div', { style: { width: '100%', background: '#e0e0e0', height: '4px', borderRadius: '2px', overflow: 'hidden' } },
@@ -4133,7 +4278,7 @@ function Dashboard() {
   // Results Screen
   if (step === 'results' && analysis) {
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
-      e(Header, { step, advisorName, clientName, completedCount }),
+      e(Header, { step, advisorName, clientName, modoCliente, onToggleModoCliente, completedCount }),
       e('main', { style: { flex: 1, maxWidth: '1200px', margin: '0 auto', padding: '32px', width: '100%' } },
         e('div', { style: { background: '#fff', borderRadius: '8px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)' } },
           e('p', { style: { margin: '0', fontSize: '14px', color: '#666' } }, 'Cliente'),
