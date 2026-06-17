@@ -301,7 +301,9 @@ const Header = ({ step, advisorName, clientName, modoCliente, onToggleModoClient
         )
       )
     ),
-    e('div', { style: { background: badge.bg, color: '#fff', textAlign: 'center', padding: '6px 12px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.3px' } }, badge.txt)
+    modoCliente
+      ? e('div', { style: { background: badge.bg, height: '6px' } })
+      : e('div', { style: { background: badge.bg, color: '#fff', textAlign: 'center', padding: '6px 12px', fontSize: '12px', fontWeight: '700', letterSpacing: '0.3px' } }, badge.txt)
   );
 };
 
