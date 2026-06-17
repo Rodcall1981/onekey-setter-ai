@@ -365,47 +365,6 @@ function Dashboard() {
     }
   }, []);
 
-  // Rehidratar la reunión en curso al montar (sobrevive recargas / "atrás" del navegador)
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem(PERSIST_KEY);
-      if (raw) {
-        const s = JSON.parse(raw);
-        if (s && s.step && s.step !== 'setup') {
-          if (s.advisorName) setAdvisorName(s.advisorName);
-          if (s.clientName) setClientName(s.clientName);
-          if (s.sessionId) setSessionId(s.sessionId);
-          if (s.reunionMode) setReunionMode(s.reunionMode);
-          if (typeof s.consentGiven === 'boolean') setConsentGiven(s.consentGiven);
-          if (s.discoveryAnswers) setDiscoveryAnswers(s.discoveryAnswers);
-          if (s.profileSemaforo) setProfileSemaforo(s.profileSemaforo);
-          if (typeof s.profileConfirmed === 'boolean') setProfileConfirmed(s.profileConfirmed);
-          if (s.selectedProfile) setSelectedProfile(s.selectedProfile);
-          if (s.summary) setSummary(s.summary);
-          if (Array.isArray(s.projects)) setProjects(s.projects);
-          if (s.currentProject) setCurrentProject(s.currentProject);
-          setStep(s.step);
-        }
-      }
-    } catch (_) {}
-    setHidratado(true);
-  }, []);
-
-  // Guardar snapshot de la reunión en cada cambio relevante
-  React.useEffect(() => {
-    if (!hidratado || step === 'setup') return;
-    try {
-      localStorage.setItem(PERSIST_KEY, JSON.stringify({
-        step, sessionId, advisorName, clientName, reunionMode, consentGiven,
-        discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile,
-        summary, projects, currentProject, _ts: Date.now()
-      }));
-    } catch (_) {}
-  }, [hidratado, step, sessionId, advisorName, clientName, reunionMode, consentGiven, discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile, summary, projects, currentProject]);
-
-  // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
-  React.useEffect(() => { setError(null); }, [step]);
-
   // ESTACIÓN 2: Discovery responses
   const [discoveryAnswers, setDiscoveryAnswers] = useState(emptyDiscovery());
   const [expandedDiscoveryQuestion, setExpandedDiscoveryQuestion] = useState(0);
@@ -605,6 +564,47 @@ function Dashboard() {
     description: ''
   });
   const [adminUploadingImages, setAdminUploadingImages] = useState(false);
+
+  // Rehidratar la reunión en curso al montar (sobrevive recargas / "atrás" del navegador)
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PERSIST_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s && s.step && s.step !== 'setup') {
+          if (s.advisorName) setAdvisorName(s.advisorName);
+          if (s.clientName) setClientName(s.clientName);
+          if (s.sessionId) setSessionId(s.sessionId);
+          if (s.reunionMode) setReunionMode(s.reunionMode);
+          if (typeof s.consentGiven === 'boolean') setConsentGiven(s.consentGiven);
+          if (s.discoveryAnswers) setDiscoveryAnswers(s.discoveryAnswers);
+          if (s.profileSemaforo) setProfileSemaforo(s.profileSemaforo);
+          if (typeof s.profileConfirmed === 'boolean') setProfileConfirmed(s.profileConfirmed);
+          if (s.selectedProfile) setSelectedProfile(s.selectedProfile);
+          if (s.summary) setSummary(s.summary);
+          if (Array.isArray(s.projects)) setProjects(s.projects);
+          if (s.currentProject) setCurrentProject(s.currentProject);
+          setStep(s.step);
+        }
+      }
+    } catch (_) {}
+    setHidratado(true);
+  }, []);
+
+  // Guardar snapshot de la reunión en cada cambio relevante
+  React.useEffect(() => {
+    if (!hidratado || step === 'setup') return;
+    try {
+      localStorage.setItem(PERSIST_KEY, JSON.stringify({
+        step, sessionId, advisorName, clientName, reunionMode, consentGiven,
+        discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile,
+        summary, projects, currentProject, _ts: Date.now()
+      }));
+    } catch (_) {}
+  }, [hidratado, step, sessionId, advisorName, clientName, reunionMode, consentGiven, discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile, summary, projects, currentProject]);
+
+  // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
+  React.useEffect(() => { setError(null); }, [step]);
 
   // Load summary when entering Station 4
   React.useEffect(() => {
