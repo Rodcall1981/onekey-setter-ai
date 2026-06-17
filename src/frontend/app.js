@@ -376,6 +376,7 @@ function Dashboard() {
   // Modo Cliente: oculta el material de apoyo (coaching, perfil, guiones) para poder compartir pantalla
   const [modoCliente, setModoCliente] = useState(() => { try { return localStorage.getItem('modoCliente') === '1'; } catch (_) { return false; } });
   const onToggleModoCliente = () => setModoCliente(v => { const nv = !v; try { localStorage.setItem('modoCliente', nv ? '1' : '0'); } catch (_) {} return nv; });
+  const [mostrarCargaManual, setMostrarCargaManual] = useState(false);
   const [focusedNoteField, setFocusedNoteField] = useState(null); // Para focus automático en "Otra"
 
   // ESTACIÓN 3: Profile + Capacity
@@ -3166,13 +3167,18 @@ function Dashboard() {
               )
             ),
 
-            e('hr', { style: { border: 'none', borderTop: '2px solid #ddd', margin: '32px 0' } }),
-            e('h2', { style: { margin: '0 0 16px', fontSize: '16px', fontWeight: '700', color: '#000' } }, '✏️ O Carga Manualmente')
+            e('hr', { style: { border: 'none', borderTop: '2px solid #ddd', margin: '32px 0' } })
           )
         ),
 
-        // Formulario
-        e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
+        // Carga manual: oculta en Modo Cliente; en modo normal queda colapsada tras un check
+        !modoCliente && e('label', { style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', background: '#fff', borderRadius: '8px', padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: mostrarCargaManual ? '12px' : '24px', fontWeight: '600', color: '#000' } },
+          e('input', { type: 'checkbox', checked: mostrarCargaManual, onChange: () => setMostrarCargaManual(v => !v), style: { width: 'auto', margin: 0 } }),
+          e('span', null, '✏️ Cargar un proyecto manualmente')
+        ),
+
+        // Formulario (solo si el ejecutivo activó el check y no está en Modo Cliente)
+        !modoCliente && mostrarCargaManual && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
           e('h3', { style: { margin: '0 0 20px', color: '#000', fontSize: '16px', fontWeight: '600' } }, 'Proyecto ' + currentProject.project_number),
 
           // Estado
