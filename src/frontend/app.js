@@ -1541,7 +1541,10 @@ function Dashboard() {
         mainImage ? e('img', {
           src: mainImage,
           style: { width: '100%', height: '100%', objectFit: 'cover' }
-        }) : e('div', { style: { width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' } }, '📸'),
+        }) : e('div', { style: { width: '100%', height: '100%', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #eef2f7 0%, #dde5ee 100%)', color: '#8a97a6' } },
+          e('span', { style: { fontSize: '34px' } }, '🏢'),
+          e('span', { style: { fontSize: '11px', fontWeight: '600', letterSpacing: '0.5px' } }, 'Sin imagen')
+        ),
         // Badge de estado
         e('div', { style: { position: 'absolute', top: '12px', right: '12px', background: stateBadgeColor, color: '#fff', padding: '6px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' } }, stateLabel)
       ),
@@ -3359,13 +3362,13 @@ function Dashboard() {
       URGENCIA: {
         titulo: 'Cierre por Urgencia',
         guion: [
-          '"Las unidades de este modelo están limitadas. La inmobiliaria sube lista el [fecha real]. Si quieres asegurar esta UF, hay que reservar antes."'
+          '"Las unidades de este modelo están limitadas. La inmobiliaria sube lista el (indica la fecha real). Si quieres asegurar esta UF, hay que reservar antes."'
         ]
       },
       PREGUNTA_INVERSA: {
         titulo: 'Cierre por Pregunta Inversa (Ziglar)',
         guion: [
-          '"¿Te gustaría tener una propiedad que te genere UF [X] al año desde [año]?"',
+          '"¿Te gustaría tener una propiedad que te genere UF (monto estimado) al año desde (año estimado)?"',
           '"Entonces lo único que decidimos hoy es si lo haces conmigo o con otro. Y eso ya lo decidiste hace 30 minutos cuando dijiste que confiabas en el análisis. ¿Vamos?"'
         ]
       }
@@ -3374,8 +3377,8 @@ function Dashboard() {
     const RESERVATION_SCRIPTS = {
       VIVIENDA_PROPIA: '"...por 100 lucas reembolsables, durante 7 días esta casa es tuya para decidir con calma, sin que nadie te la quite. Es comprarte tranquilidad, no comprometerte."',
       PRIMERA_INVERSION: '"...y en esos 7 días no estás solo: te acompaño paso a paso, vemos juntos la pre-aprobación, resolvemos dudas, y recién ahí decides. La reserva solo asegura que la unidad te espere mientras hacemos ese trabajo juntos."',
-      INVERSIONISTA: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF [X] de upside. ¿La tomamos?"',
-      EXPERTO: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF [X] de upside. ¿La tomamos?"'
+      INVERSIONISTA: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF (monto estimado) de upside. ¿La tomamos?"',
+      EXPERTO: '"...en 7 días la lista puede moverse y esta UF de entrada no se sostiene. La reserva congela el precio de hoy. Es la opción call más barata del mercado: $100.000 reembolsables por asegurar UF (monto estimado) de upside. ¿La tomamos?"'
     };
 
     return e('div', { style: { display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'linear-gradient(to right, #f7f7f7 0%, #f0f2f5 50%, #e8eef5 100%)' } },
@@ -3416,7 +3419,7 @@ function Dashboard() {
           e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '600', color: '#000' } }, '💰 Pedido de Reserva'),
           e('div', { style: { background: '#f9f9f9', padding: '12px', borderRadius: '6px', marginBottom: '16px' } },
             e('p', { style: { margin: '0 0 8px', fontSize: '13px', color: '#333', lineHeight: '1.6' } },
-              '"[Nombre], te propongo algo. No me digas hoy si compras. Dime si quieres congelar esta unidad. La reserva son $100.000, completamente reembolsables, y te guarda el departamento 7 días. Si en esos 7 días decides que no, te devuelvo el 100% y quedamos igual de bien. Lo único que no puedo hacer es guardártela gratis — si mañana otro la quiere, se va. ¿La congelamos? Te paso el link y queda en 2 minutos."'
+              '"' + (clientName || 'Hola') + ', te propongo algo. No me digas hoy si compras. Dime si quieres congelar esta unidad. La reserva son $100.000, completamente reembolsables, y te guarda el departamento 7 días. Si en esos 7 días decides que no, te devuelvo el 100% y quedamos igual de bien. Lo único que no puedo hacer es guardártela gratis — si mañana otro la quiere, se va. ¿La congelamos? Te paso el link y queda en 2 minutos."'
             ),
             e('p', { style: { margin: '8px 0 0', fontSize: '12px', color: '#666', fontStyle: 'italic' } },
               RESERVATION_SCRIPTS[summary?.profile || 'VIVIENDA_PROPIA']
@@ -3745,8 +3748,8 @@ function Dashboard() {
               e('div', null,
                 e('h3', { style: { margin: '0 0 16px', fontSize: '14px', fontWeight: '700', color: '#000', textTransform: 'uppercase', letterSpacing: '0.5px' } }, '📍 Ubicación'),
                 e('div', { style: { fontSize: '14px', lineHeight: '2', color: '#333' } },
-                  e('p', { style: { margin: '0' } }, '🏘️ Comuna: ' + (currentProject.comuna || 'N/A')),
-                  e('p', { style: { margin: '0' } }, '🛣️ Dirección: ' + (currentProject.address || 'N/A')),
+                  currentProject.comuna && e('p', { style: { margin: '0' } }, '🏘️ Comuna: ' + currentProject.comuna),
+                  currentProject.address && e('p', { style: { margin: '0' } }, '🛣️ Dirección: ' + currentProject.address),
                   currentProject.gmaps_link && e('a', { href: currentProject.gmaps_link, target: '_blank', style: { color: '#1b5e20', textDecoration: 'none', fontWeight: '600', fontSize: '13px' } }, '→ Ver en Google Maps')
                 ),
 
