@@ -1860,7 +1860,8 @@ function Dashboard() {
       });
 
       if (!profileResp.ok) {
-        throw new Error('Error al guardar perfil y capacidad');
+        const errData = await profileResp.json();
+        throw new Error(errData.details || errData.message || 'Error al guardar perfil y capacidad');
       }
 
       // Registrar evento 'station_completed' para Estación 3
