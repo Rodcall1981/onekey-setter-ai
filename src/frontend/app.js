@@ -293,9 +293,9 @@ const Header = ({ step, advisorName, clientName, modoCliente, onToggleModoClient
             style: { padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer', fontWeight: '700', fontSize: '12px', background: modoCliente ? '#1b5e20' : '#515266', color: '#fff' }
           }, modoCliente ? '👁 Modo cliente: ON' : '🙈 Modo cliente: OFF'),
           showProgress && e('div', { style: { textAlign: 'right' } },
-            e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/8' : 'Progreso'),
+            e('p', { style: { margin: '0 0 6px', fontSize: '11px', color: '#aaa', fontWeight: '500' } }, advisorName && clientName ? clientName + ' • ' + completedCount + '/9' : 'Progreso'),
             e('div', { style: { width: '120px', background: '#515266', height: '3px', borderRadius: '2px', overflow: 'hidden' } },
-              e('div', { style: { background: '#d1dfdf', height: '100%', width: (completedCount / 8 * 100) + '%', transition: 'width 0.3s' } })
+              e('div', { style: { background: '#d1dfdf', height: '100%', width: Math.min(100, completedCount / 9 * 100) + '%', transition: 'width 0.3s' } })
             )
           )
         )
@@ -336,6 +336,23 @@ function emptyDiscovery() {
   };
 }
 const PERSIST_KEY = 'setterSesionEnCurso';
+
+// Proyecto vacío para carga manual (evita estados null que rompen el render)
+function freshProject(projectNumber) {
+  return {
+    project_number: projectNumber || 1,
+    project_state: 'Blanco',
+    comuna: '',
+    address: '',
+    gmaps_link: '',
+    amenities: '',
+    typologies: '',
+    price_from_uf: '',
+    local_rent_uf: '',
+    appreciation_percent: '',
+    image_urls: []
+  };
+}
 
 function Dashboard() {
   const [step, setStep] = useState('setup');
@@ -391,19 +408,7 @@ function Dashboard() {
 
   // ESTACIÓN 4: Projects Form
   const [projects, setProjects] = useState([]);  // Array de proyectos guardados
-  const [currentProject, setCurrentProject] = useState({
-    project_number: 1,
-    project_state: 'Blanco',
-    comuna: '',
-    address: '',
-    gmaps_link: '',
-    amenities: '',
-    typologies: '',
-    price_from_uf: '',
-    local_rent_uf: '',
-    appreciation_percent: '',
-    image_urls: []
-  });
+  const [currentProject, setCurrentProject] = useState(freshProject(1));
   const [uploadingImages, setUploadingImages] = useState(false);
   const [projectsLoaded, setProjectsLoaded] = useState(false);
 
@@ -607,25 +612,36 @@ function Dashboard() {
     } catch (_) {}
   }, [hidratado, step, sessionId, advisorName, clientName, reunionMode, consentGiven, discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile, summary, projects, currentProject]);
 
-  // BUG FIX: Detectar cambio de sesión y limpiar datos de Discovery + Perfil
-  React.useEffect(() => {
-    if (hidratado && sessionId && previousSessionId && sessionId !== previousSessionId) {
-      // Nueva sesión detectada: limpiar todos los datos del cliente anterior
-      setDiscoveryAnswers(emptyDiscovery());
-      setProfileSemaforo(null);
-      setProfileConfirmed(false);
-      setSelectedProfile(null);
-      setSummary(null);
-      setProjects([]);
-      setCurrentProject(null);
-      setStep('apertura');
-      setError(null);
-      console.log('🔄 Nueva sesión detectada - limpiando datos anteriores');
-    }
-    if (hidratado && sessionId) {
-      setPreviousSessionId(sessionId);
-    }
-  }, [hidratado, sessionId]);
+  // Limpieza explícita de los datos del cliente anterior.
+  // NOTA: antes esto era un useEffect reactivo sobre sessionId que además hacía
+  // setStep('apertura'); eso pisaba el setStep('questions') de saveSessionAndProceed
+  // y provocaba: (1) volver siempre a Apertura, (2) sesiones duplicadas en Supabase
+  // con cada clic, y (3) currentProject en null que rompía la Estación 4 (pantalla blanca).
+  const resetClientData = () => {
+    setDiscoveryAnswers(emptyDiscovery());
+    setProfileSemaforo(null);
+    setProfileConfirmed(false);
+    setSelectedProfile(null);
+    setSummary(null);
+    setProjects([]);
+    setCurrentProject(freshProject(1));
+    setStation4SelectedProjects(new Set());
+    setStation4CatalogFilter('');
+    setError(null);
+  };
+
+  // Reset total para "+ Nueva sesión": limpia también identidad de la sesión y el snapshot persistido
+  const startNewSession = () => {
+    try { localStorage.removeItem(PERSIST_KEY); } catch (_) {}
+    resetClientData();
+    setSessionId(null);
+    setPreviousSessionId(null);
+    setClientName('');
+    setConsentGiven(false);
+    setReunionMode('2_reuniones');
+    setRecentSessions([]);
+    setStep('setup');
+  };
 
   // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
   React.useEffect(() => { setError(null); }, [step]);
@@ -709,7 +725,10 @@ function Dashboard() {
 
       const sessionData = await sessionResponse.json();
       const newSessionId = sessionData.id;
+      // Sesión nueva: partir con datos de cliente limpios (sin volver a Apertura)
+      resetClientData();
       setSessionId(newSessionId);
+      setPreviousSessionId(newSessionId);
 
       // Eventos de telemetría (no bloquean el avance ni crean sesiones duplicadas si falla la red)
       const _ev = (n) => fetch('/api/events', {
@@ -2909,7 +2928,12 @@ function Dashboard() {
               e('button', {
                 onClick: async () => {
                   setLoading(true);
+                  // Si se retoma una sesión DISTINTA a la persistida, limpiar datos del cliente anterior
+                  if (sess.id !== sessionId) {
+                    resetClientData();
+                  }
                   setSessionId(sess.id);
+                  setPreviousSessionId(sess.id);
                   setClientName(sess.client_name);
                   setReunionMode(sess.reunion_mode);
                   // Jump to Station 4 if session is complete (has projects)
@@ -2948,7 +2972,7 @@ function Dashboard() {
             )
           ),
           e('button', {
-            onClick: () => { setRecentSessions([]); },
+            onClick: startNewSession,
             style: { marginTop: '12px', width: '100%', padding: '10px', background: 'transparent', border: '1px solid #1b5e20', color: '#1b5e20', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }
           }, '+ Nueva sesión')
         ),
@@ -3082,7 +3106,7 @@ function Dashboard() {
           e('div', { style: { display: 'flex', gap: '12px' } },
             e('button', {
               onClick: () => setProfileConfirmed(true),
-              style: { flex: 1, padding: '12px', background: profileConfirmed ? '#1b5e20' : '#e0e0e0', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
+              style: { flex: 1, padding: '12px', background: profileConfirmed ? '#1b5e20' : '#000', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }
             }, profileConfirmed ? '✅ Perfil Confirmado' : '✓ Confirmar Perfil')
           )
         ),
@@ -3163,6 +3187,14 @@ function Dashboard() {
           e('p', { style: { margin: '0', fontSize: '13px', fontWeight: '600' } }, '📍 ESTACIÓN 4 PARTE B: CARGAR PROYECTOS (' + (projects.length + 1) + '/3)')
         ),
 
+        // Estado de carga del catálogo (antes quedaba la pantalla vacía sin feedback)
+        station4CatalogLoading && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', textAlign: 'center', color: '#666', fontSize: '13px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } },
+          '⏳ Cargando catálogo de proyectos...'
+        ),
+        !station4CatalogLoading && station4Catalog.length === 0 && e('div', { style: { background: '#fff8e1', border: '1px solid #ffe082', borderRadius: '8px', padding: '16px', color: '#795548', fontSize: '13px', marginBottom: '24px' } },
+          '📭 No se pudo cargar el catálogo de proyectos. Puedes cargar un proyecto manualmente más abajo o recargar la página.'
+        ),
+
         // Catálogo de proyectos disponibles
         station4Catalog.length > 0 && (
           e('div', { style: { marginBottom: '32px' } },
@@ -3211,7 +3243,10 @@ function Dashboard() {
                 e('p', { style: { margin: '0 0 12px', fontSize: '13px', fontWeight: '700', color: '#1b5e20' } }, '✓ ' + station4SelectedProjects.size + ' proyecto(s) seleccionado(s)'),
                 e('button', {
                   onClick: () => {
-                    setProjects(station4Catalog.filter(p => station4SelectedProjects.has(p.id)));
+                    const seleccionados = station4Catalog.filter(p => station4SelectedProjects.has(p.id));
+                    setProjects(seleccionados);
+                    // Dejar el primero seleccionado para que la vista muestre sus detalles (nunca null)
+                    setCurrentProject(seleccionados[0] || freshProject(1));
                     setStation4SelectedProjects(new Set());
                     setStation4CatalogFilter('');
                     setStep('station_4_projects_view');
@@ -3233,7 +3268,7 @@ function Dashboard() {
 
         // Formulario (solo si el ejecutivo activó el check y no está en Modo Cliente)
         !modoCliente && mostrarCargaManual && e('div', { style: { background: '#fff', borderRadius: '8px', padding: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', marginBottom: '24px' } },
-          e('h3', { style: { margin: '0 0 20px', color: '#000', fontSize: '16px', fontWeight: '600' } }, 'Proyecto ' + currentProject.project_number),
+          e('h3', { style: { margin: '0 0 20px', color: '#000', fontSize: '16px', fontWeight: '600' } }, 'Proyecto ' + (currentProject.project_number || (projects.length + 1))),
 
           // Estado
           e('div', { style: { marginBottom: '16px' } },
@@ -3760,7 +3795,12 @@ function Dashboard() {
             e(ProjectCard, {
               key: proj.id || idx,
               project: proj,
-              isSelected: currentProject.project_number === proj.project_number,
+              // Comparar por id cuando exista (proyectos del catálogo); currentProject puede venir vacío
+              isSelected: !!currentProject && (
+                (proj.id != null && currentProject.id != null)
+                  ? currentProject.id === proj.id
+                  : currentProject.project_number === proj.project_number
+              ),
               onClick: () => setCurrentProject(proj),
               onCotizar: () => abrirCotizador(proj)
             })
@@ -3992,9 +4032,9 @@ function Dashboard() {
           e('div', { style: { background: '#e8f5e9', borderRadius: '8px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', borderLeft: '4px solid #1b5e20' } },
             e('p', { style: { margin: '0 0 12px', fontSize: '12px', fontWeight: '600', color: '#1b5e20', textTransform: 'uppercase' } }, '💳 Capacidad'),
             e('div', { style: { fontSize: '12px', lineHeight: '1.8', color: '#333' } },
-              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Crédito: '), '$' + (summary.maxLoan || 0).toLocaleString('es-CL')),
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Crédito: '), '$' + (summary.maxLoan || 0).toLocaleString('es-CL', {maximumFractionDigits: 0})),
               e('div', null, e('span', { style: { fontWeight: '600' } }, 'Propiedad: '), 'UF ' + (summary.affordablePropertyUF || 0).toLocaleString('es-CL', {maximumFractionDigits: 0})),
-              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Dividendo: '), '$' + (summary.estimatedDividend || 0).toLocaleString('es-CL') + '/mes'),
+              e('div', null, e('span', { style: { fontWeight: '600' } }, 'Dividendo: '), '$' + (summary.estimatedDividend || 0).toLocaleString('es-CL', {maximumFractionDigits: 0}) + '/mes'),
               e('div', null, e('span', { style: { fontWeight: '600' } }, 'Plazo: '), summary.loanTermYears + ' años')
             )
           )
@@ -4414,4 +4454,39 @@ function Dashboard() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(e(Dashboard));
+// ErrorBoundary: si algo revienta en el render, mostrar pantalla de recuperación
+// en vez de una página en blanco (y permitir reiniciar la sesión pegada).
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, errorMessage: '' };
+  }
+  static getDerivedStateFromError(err) {
+    return { hasError: true, errorMessage: (err && err.message) || 'Error desconocido' };
+  }
+  componentDidCatch(err, info) {
+    console.error('ErrorBoundary atrapó un error:', err, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return e('div', { style: { minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', background: '#fafafa', padding: '24px', textAlign: 'center' } },
+        e('h2', { style: { margin: 0, color: '#c62828', fontSize: '20px' } }, '⚠️ Algo salió mal'),
+        e('p', { style: { margin: 0, color: '#666', fontSize: '13px', maxWidth: '480px' } }, 'Ocurrió un error inesperado en la aplicación. Puedes recargar para continuar donde ibas, o reiniciar la sesión si el problema persiste.'),
+        e('p', { style: { margin: 0, color: '#999', fontSize: '11px', fontFamily: 'monospace' } }, this.state.errorMessage),
+        e('div', { style: { display: 'flex', gap: '12px' } },
+          e('button', {
+            onClick: () => window.location.reload(),
+            style: { padding: '12px 24px', background: '#000', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, '↻ Recargar'),
+          e('button', {
+            onClick: () => { try { localStorage.removeItem(PERSIST_KEY); } catch (_) {} window.location.reload(); },
+            style: { padding: '12px 24px', background: '#fff', color: '#c62828', border: '2px solid #c62828', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, '🔄 Reiniciar sesión')
+        )
+      );
+    }
+    return this.props.children;
+  }
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(e(ErrorBoundary, null, e(Dashboard)));
