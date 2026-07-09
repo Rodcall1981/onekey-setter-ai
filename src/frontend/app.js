@@ -373,6 +373,7 @@ function Dashboard() {
   const [expandedSidePanel, setExpandedSidePanel] = useState(false);
   const [objectionReturnStep, setObjectionReturnStep] = useState('station_4_projects_view');
   const [hidratado, setHidratado] = useState(false);
+  const [previousSessionId, setPreviousSessionId] = useState(null); // Track session changes
   // Modo Cliente: oculta el material de apoyo (coaching, perfil, guiones) para poder compartir pantalla
   const [modoCliente, setModoCliente] = useState(() => { try { return localStorage.getItem('modoCliente') === '1'; } catch (_) { return false; } });
   const onToggleModoCliente = () => setModoCliente(v => { const nv = !v; try { localStorage.setItem('modoCliente', nv ? '1' : '0'); } catch (_) {} return nv; });
@@ -605,6 +606,26 @@ function Dashboard() {
       }));
     } catch (_) {}
   }, [hidratado, step, sessionId, advisorName, clientName, reunionMode, consentGiven, discoveryAnswers, profileSemaforo, profileConfirmed, selectedProfile, summary, projects, currentProject]);
+
+  // BUG FIX: Detectar cambio de sesión y limpiar datos de Discovery + Perfil
+  React.useEffect(() => {
+    if (hidratado && sessionId && previousSessionId && sessionId !== previousSessionId) {
+      // Nueva sesión detectada: limpiar todos los datos del cliente anterior
+      setDiscoveryAnswers(emptyDiscovery());
+      setProfileSemaforo(null);
+      setProfileConfirmed(false);
+      setSelectedProfile(null);
+      setSummary(null);
+      setProjects([]);
+      setCurrentProject(null);
+      setStep('apertura');
+      setError(null);
+      console.log('🔄 Nueva sesión detectada - limpiando datos anteriores');
+    }
+    if (hidratado && sessionId) {
+      setPreviousSessionId(sessionId);
+    }
+  }, [hidratado, sessionId]);
 
   // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
   React.useEffect(() => { setError(null); }, [step]);
