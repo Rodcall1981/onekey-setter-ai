@@ -609,6 +609,14 @@ function Dashboard() {
   // Limpiar mensajes de error al cambiar de pantalla (no arrastrar errores viejos)
   React.useEffect(() => { setError(null); }, [step]);
 
+  // MEDIDA D: Auto-limpiar error después de 5 segundos
+  React.useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   // Load summary when entering Station 4
   React.useEffect(() => {
     if (step === 'station_4_summary' && !summary && sessionId) {
@@ -1834,11 +1842,22 @@ function Dashboard() {
       return;
     }
 
+    const capacity = profileSemaforo.capacity || {};
+
+    // MEDIDA B: Validar capacidad ANTES de enviar
+    if (!capacity.maxLoanAmountClp || capacity.maxLoanAmountClp <= 0) {
+      setError('⚠️ No hay capacidad de compra calculada. Verifica que la edad y renta en Discovery sean válidas (>0). Si el problema persiste, vuelve a Discovery e intenta de nuevo.');
+      return;
+    }
+    if (capacity.loanTermYears === undefined || capacity.loanTermYears < 0) {
+      setError('⚠️ El plazo del crédito no es válido. Revisa los datos de edad en Discovery (debe ser < 66 años).');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const capacity = profileSemaforo.capacity || {};
 
       // Guardar en profile_semaforo con datos de capacidad
       const profileResp = await fetch('/api/profile-semaforo', {
@@ -3081,10 +3100,11 @@ function Dashboard() {
 
         // Botones de acción
         e('div', { style: { display: 'flex', gap: '12px' } },
+          // MEDIDA A: Botón "Volver" SIEMPRE habilitado (incluso si hay error)
           e('button', {
             onClick: () => setStep('questions'),
-            style: { flex: 1, padding: '14px', background: '#555', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
-          }, 'Volver a Discovery'),
+            style: { flex: 1, padding: '14px', background: '#d32f2f', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }
+          }, '← Volver a Discovery'),
           e('button', {
             onClick: saveProfileSemaforoAndProceed,
             disabled: !profileConfirmed || loading,
@@ -3092,8 +3112,20 @@ function Dashboard() {
           }, loading ? 'Guardando...' : '✓ Confirmar y Continuar')
         ),
 
+        // MEDIDA C: Panel de error con opciones "Reintentar" y "Volver"
         error && e('div', { style: { background: '#ffebee', borderRadius: '8px', padding: '16px', marginTop: '24px', borderLeft: '3px solid #ef5350' } },
-          e('p', { style: { margin: '0', fontSize: '13px', color: '#b71c1c' } }, '❌ ' + error)
+          e('p', { style: { margin: '0 0 12px', fontSize: '13px', color: '#b71c1c', fontWeight: '600' } }, '❌ ' + error),
+          e('div', { style: { display: 'flex', gap: '12px', marginTop: '12px' } },
+            e('button', {
+              onClick: saveProfileSemaforoAndProceed,
+              disabled: loading,
+              style: { flex: 1, padding: '10px', background: loading ? '#ccc' : '#1976d2', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '12px' }
+            }, '🔄 Reintentar'),
+            e('button', {
+              onClick: () => setStep('questions'),
+              style: { flex: 1, padding: '10px', background: '#f44336', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer', fontSize: '12px' }
+            }, '← Volver a Discovery')
+          )
         )
       ),
       e(Footer)
